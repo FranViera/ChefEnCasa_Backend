@@ -93,7 +93,8 @@ const swaggerOptions = {
       description: "Documentación de la API",
       version: "1.0.0"
     },
-    servers: ["http://localhost:4000"] // URL del servidor local
+    servers: [
+      { url: "https://chefencasabackend-production.up.railway.app"}] // URL del servidor local
   },
   apis: ["index.js"] // Archivo que contiene las rutas de la API
 };
