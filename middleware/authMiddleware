@@ -1,0 +1,32 @@
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = process.env.JWT_SECRET || 'supersecretkey';
+
+// Middleware para verificar el token JWT
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Se espera el formato "Bearer TOKEN"
+  
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+  
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: 'Token inválido' });
+      }
+      req.user = user;
+      next(); // Continua con la siguiente función del middleware
+    });
+  };  
+
+  const checkRole = (role) => (req, res, next) => {
+    if (req.user && req.user.role === role) {
+      next();
+    } else {
+      res.status(403).json({ message: 'Acceso denegado' });
+    }
+  };
+  
+  
+module.exports = { authenticateToken, checkRole };
+
