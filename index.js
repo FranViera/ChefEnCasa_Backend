@@ -1486,11 +1486,28 @@ app.get('/recetas/mejor-valoradas', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
 
-    // Obtener las recetas de la colección `recetasValoradas` ordenadas por `valoracion`
+    // Obtener las recetas con promedio de valoraciones y cantidad de reseñas
     const recetas = await db.collection('recetasValoradas')
-      .find()
-      .sort({ valoracion: -1 })
-      .limit(10)  // Opcional: Limitar el número de recetas devueltas
+      .aggregate([
+        {
+          $group: {
+            _id: "$recipeId", // Agrupar por ID de la receta
+            title: { $first: "$title" },
+            image: { $first: "$image" },
+            ingredients: { $first: "$ingredients" },
+            time: { $first: "$time" },
+            servings: { $first: "$servings" },
+            averageRating: { $avg: "$valoracion" }, // Calcular el promedio de valoraciones
+            reviews: { $sum: 1 } // Contar la cantidad de reseñas
+          }
+        },
+        {
+          $sort: { averageRating: -1, reviews: -1 } // Ordenar por promedio y luego por cantidad de reseñas
+        },
+        {
+          $limit: 10 // Limitar el resultado a las 10 mejores recetas
+        }
+      ])
       .toArray();
 
     res.status(200).json(recetas);
