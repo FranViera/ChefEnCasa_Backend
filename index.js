@@ -1446,7 +1446,7 @@ app.delete('/notificaciones/:id', authenticateToken, async (req, res) => {
 //=====================================VALORAR RECETA==========================================
 //==============================================================================================
 app.post('/receta/valorar', authenticateToken, async (req, res) => {
-  const { recipeId, valoracion } = req.body;
+  const { recipeId, valoracion, nombre, porciones, tiempo } = req.body;
 
   // Verificar que la valoración sea un número entero entre 1 y 5
   if (!recipeId || !Number.isInteger(valoracion) || valoracion < 1 || valoracion > 5) {
@@ -1457,10 +1457,25 @@ app.post('/receta/valorar', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
 
-    // Guardar la valoración del usuario para la receta
+    // Guardar la valoración del usuario para la receta en la colección `valoraciones`
     await db.collection('valoraciones').updateOne(
       { usuarioId, recipeId },
       { $set: { valoracion } },
+      { upsert: true }
+    );
+
+    // Guardar o actualizar la receta valorada en la colección `recetasValoradas`
+    await db.collection('recetasValoradas').updateOne(
+      { recipeId },  // Se usa `recipeId` como identificador único
+      { 
+        $set: { 
+          nombre, 
+          valoracion, 
+          porciones, 
+          tiempo 
+        },
+        $inc: { valoracion: valoracion }  // Incrementa la valoración
+      },
       { upsert: true }
     );
 
@@ -1468,6 +1483,26 @@ app.post('/receta/valorar', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error al valorar receta:', error.message);
     res.status(500).json({ message: 'Error al valorar la receta' });
+  }
+});
+
+//==================================OBTENER RECETAS MEJOR VALORADAS==================================
+//===============================================================================================
+app.get('/recetas/mejor-valoradas', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+
+    // Obtener las recetas de la colección `recetasValoradas` ordenadas por `valoracion`
+    const recetas = await db.collection('recetasValoradas')
+      .find()
+      .sort({ valoracion: -1 })
+      .limit(10)  // Opcional: Limitar el número de recetas devueltas
+      .toArray();
+
+    res.status(200).json(recetas);
+  } catch (error) {
+    console.error('Error al obtener recetas mejor valoradas:', error.message);
+    res.status(500).json({ message: 'Error al obtener recetas mejor valoradas' });
   }
 });
 
