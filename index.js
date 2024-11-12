@@ -1492,11 +1492,10 @@ app.get('/recetas/mejor-valoradas', authenticateToken, async (req, res) => {
         {
           $group: {
             _id: "$recipeId", // Agrupar por ID de la receta
-            title: { $first: "$title" },
-            image: { $first: "$image" },
-            ingredients: { $first: "$ingredients" },
-            time: { $first: "$time" },
-            servings: { $first: "$servings" },
+            nombre: { $first: "$nombre" },
+            imageUrl: { $first: "$imageUrl" },
+            porciones: { $first: "$porciones" },
+            tiempo: { $first: "$tiempo" },
             averageRating: { $avg: "$valoracion" }, // Calcular el promedio de valoraciones
             reviews: { $sum: 1 } // Contar la cantidad de reseñas
           }
