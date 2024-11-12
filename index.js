@@ -1446,7 +1446,7 @@ app.delete('/notificaciones/:id', authenticateToken, async (req, res) => {
 //=====================================VALORAR RECETA==========================================
 //==============================================================================================
 app.post('/receta/valorar', authenticateToken, async (req, res) => {
-  const { recipeId, valoracion, nombre, porciones, tiempo } = req.body;
+  const { recipeId, valoracion, nombre, porciones, tiempo, imageUrl } = req.body;
 
   // Verificar que la valoración sea un número entero entre 1 y 5
   if (!recipeId || !Number.isInteger(valoracion) || valoracion < 1 || valoracion > 5) {
@@ -1457,24 +1457,18 @@ app.post('/receta/valorar', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
 
-    // Guardar la valoración del usuario para la receta en la colección `valoraciones`
-    await db.collection('valoraciones').updateOne(
-      { usuarioId, recipeId },
-      { $set: { valoracion } },
-      { upsert: true }
-    );
-
     // Guardar o actualizar la receta valorada en la colección `recetasValoradas`
     await db.collection('recetasValoradas').updateOne(
-      { recipeId },  // Se usa `recipeId` como identificador único
+      { recipeId, usuarioId },  // Clave compuesta por `recipeId` y `usuarioId` para permitir valoraciones únicas por usuario y receta
       { 
         $set: { 
-          nombre, 
-          valoracion, 
-          porciones, 
-          tiempo 
-        },
-        $inc: { valoracion: valoracion }  // Incrementa la valoración
+          valoracion,
+          nombre,
+          porciones,
+          tiempo,
+          imageUrl, // Guardar la URL de la imagen
+          fechaValoracion: new Date()
+        }
       },
       { upsert: true }
     );
