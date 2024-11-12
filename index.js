@@ -1511,7 +1511,7 @@ app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
     const recetasValoradas = await db.collection('recetasValoradas')
       .find({ usuarioId })
       .sort({ fechaValoracion: -1 }) // Ordenar por fecha descendente
-      .limit(3) // Limitar a las 5 recetas más recientes
+      .limit(5) // Limitar a las 5 recetas más recientes
       .toArray();
 
     res.status(200).json(recetasValoradas);
