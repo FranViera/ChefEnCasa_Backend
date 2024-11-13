@@ -481,22 +481,19 @@ async function obtenerIngredientesReceta(recipeId) {
       }
     });
 
-    const ingredientesReceta = response.data.extendedIngredients.map(ingrediente => ({
-      name: ingrediente.name,
-      amount: ingrediente.amount
-    }));
-
-    // Conectarse a la base de datos para traducir los nombres al español
     const db = await connectToDatabase();
-    const ingredientesTraducidos = await Promise.all(ingredientesReceta.map(async (ingrediente) => {
+    
+    // Mapear y traducir cada ingrediente
+    const ingredientesReceta = await Promise.all(response.data.extendedIngredients.map(async (ingrediente) => {
       const ingredienteBD = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.name });
+
       return {
-        name: ingredienteBD ? ingredienteBD.nombreEspanol : ingrediente.name, // Usa el nombre en español o el original si no hay traducción
-        amount: ingrediente.amount
+        name: ingredienteBD ? ingredienteBD.nombreEspanol : ingrediente.name, // Usa el nombre en español si existe en la BD, si no, usa el nombre original
+        amount: ingrediente.amount,
       };
     }));
 
-    return ingredientesTraducidos;
+    return ingredientesReceta;
   } catch (error) {
     throw new Error('Error al obtener y traducir ingredientes de Spoonacular: ' + error.message);
   }
