@@ -400,6 +400,52 @@ app.get('/api/recetas', authenticateToken, async (req, res) => {
     }
   }
 });
+
+// Nueva ruta para recomendaciones
+app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+
+    // Obtener ingredientes del almacén del usuario
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
+    if (!almacen || !almacen.ingredientes) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', recomendaciones: [] });
+    }
+
+    // Obtener todas las recetas
+    const recetas = await db.collection('recetas').find().toArray();
+
+    const recomendaciones = recetas.filter((receta) => {
+      let ingredientesCoinciden = 0;
+      let cantidadSuficiente = true;
+
+      receta.ingredients.forEach((ingrediente) => {
+        const ingredienteAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+
+        if (ingredienteAlmacen) {
+          ingredientesCoinciden += 1;
+
+          // Verificar si la cantidad en almacén es suficiente
+          if (ingredienteAlmacen.cantidad < ingrediente.amount) {
+            cantidadSuficiente = false;
+          }
+        }
+      });
+
+      // Calcular porcentaje de coincidencia en ingredientes
+      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+
+      // Devolver receta si cumple con el 80% o más de coincidencia
+      return porcentajeCoincidencia >= 80 || cantidadSuficiente;
+    });
+
+    res.json({ recomendaciones });
+  } catch (error) {
+    console.error('Error al obtener recomendaciones:', error);
+    res.status(500).json({ error: 'Error al obtener recomendaciones' });
+  }
+});
 //========================================================INICIAR SERVIDOR========================================
 // Iniciar el servidor en el puerto 4000
 app.listen(PORT, () => {
