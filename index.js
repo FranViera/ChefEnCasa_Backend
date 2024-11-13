@@ -472,7 +472,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
   }
 });
 
-// Función auxiliar para obtener ingredientes de la receta desde Spoonacular
+// Función auxiliar para obtener y traducir ingredientes de la receta desde Spoonacular
 async function obtenerIngredientesReceta(recipeId) {
   try {
     const response = await axios.get(`https://api.spoonacular.com/recipes/${recipeId}/information`, {
@@ -480,14 +480,28 @@ async function obtenerIngredientesReceta(recipeId) {
         apiKey: process.env.SPOONACULAR_API_KEY
       }
     });
-    return response.data.extendedIngredients.map(ingrediente => ({
+
+    const ingredientesReceta = response.data.extendedIngredients.map(ingrediente => ({
       name: ingrediente.name,
-      amount: ingrediente.amount,
+      amount: ingrediente.amount
     }));
+
+    // Conectarse a la base de datos para traducir los nombres al español
+    const db = await connectToDatabase();
+    const ingredientesTraducidos = await Promise.all(ingredientesReceta.map(async (ingrediente) => {
+      const ingredienteBD = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.name });
+      return {
+        name: ingredienteBD ? ingredienteBD.nombreEspanol : ingrediente.name, // Usa el nombre en español o el original si no hay traducción
+        amount: ingrediente.amount
+      };
+    }));
+
+    return ingredientesTraducidos;
   } catch (error) {
-    throw new Error('Error al obtener ingredientes de Spoonacular: ' + error.message);
+    throw new Error('Error al obtener y traducir ingredientes de Spoonacular: ' + error.message);
   }
 }
+
 //========================================================INICIAR SERVIDOR========================================
 // Iniciar el servidor en el puerto 4000
 app.listen(PORT, () => {
