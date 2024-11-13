@@ -429,13 +429,15 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
     // Traducir y verificar cada receta
     const recomendaciones = await Promise.all(recetas.map(async (receta) => {
       const ingredientesReceta = await obtenerIngredientesReceta(receta.id); // Obtener ingredientes detallados de la receta
-      
+
+      console.log("Ingredientes de la receta:", ingredientesReceta); // Verifica los ingredientes obtenidos de Spoonacular
+
       let ingredientesCoinciden = 0;
       let faltantes = [];
 
       ingredientesReceta.forEach((ingrediente) => {
         const ingredienteAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
-
+        
         if (ingredienteAlmacen) {
           ingredientesCoinciden += 1;
 
@@ -450,6 +452,8 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
       // Calcular porcentaje de coincidencia
       const porcentajeCoincidencia = (ingredientesCoinciden / ingredientesReceta.length) * 100;
+
+      console.log(`Receta: ${receta.title}, Coincidencia: ${porcentajeCoincidencia}%`); // Verifica la coincidencia calculada
 
       // Filtrar las recetas que cumplan con el 80% de coincidencia
       if (porcentajeCoincidencia >= 80) {
@@ -487,8 +491,12 @@ async function obtenerIngredientesReceta(recipeId) {
     const ingredientesReceta = await Promise.all(response.data.extendedIngredients.map(async (ingrediente) => {
       const ingredienteBD = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.name });
 
+      const nombreTraducido = ingredienteBD ? ingredienteBD.nombreEspanol : ingrediente.name;
+      
+      console.log(`Ingrediente original: ${ingrediente.name}, Traducido: ${nombreTraducido}`); // Verifica la traducción
+
       return {
-        name: ingredienteBD ? ingredienteBD.nombreEspanol : ingrediente.name, // Usa el nombre en español si existe en la BD, si no, usa el nombre original
+        name: nombreTraducido, // Usa el nombre en español si existe en la BD, si no, usa el nombre original
         amount: ingrediente.amount,
       };
     }));
