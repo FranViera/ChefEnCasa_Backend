@@ -409,18 +409,31 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
     // Obtener ingredientes del almacén del usuario
     const almacen = await db.collection('almacen').findOne({ usuarioId });
-    if (!almacen || !almacen.ingredientes) {
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
       return res.status(200).json({ message: 'No hay ingredientes en el almacén', recomendaciones: [] });
     }
 
-    // Obtener todas las recetas
-    const recetas = await db.collection('recetas').find().toArray();
+    // Parámetros de la solicitud a Spoonacular para obtener recetas
+    const params = {
+      apiKey: process.env.SPOONACULAR_API_KEY,
+      number: 10,
+    };
 
-    const recomendaciones = recetas.filter((receta) => {
+    const response = await axios.get(`${SPOONACULAR_API_BASE_URL}/recipes/complexSearch`, { params });
+    const recetas = response.data.results || [];
+
+    if (recetas.length === 0) {
+      return res.status(200).json({ message: "No se encontraron recetas.", recomendaciones: [] });
+    }
+
+    // Traducir y verificar cada receta
+    const recomendaciones = await Promise.all(recetas.map(async (receta) => {
+      const ingredientesReceta = await obtenerIngredientesReceta(receta.id); // Obtener ingredientes detallados de la receta
+      
       let ingredientesCoinciden = 0;
-      let cantidadSuficiente = true;
+      let faltantes = [];
 
-      receta.ingredients.forEach((ingrediente) => {
+      ingredientesReceta.forEach((ingrediente) => {
         const ingredienteAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
 
         if (ingredienteAlmacen) {
@@ -428,24 +441,53 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
           // Verificar si la cantidad en almacén es suficiente
           if (ingredienteAlmacen.cantidad < ingrediente.amount) {
-            cantidadSuficiente = false;
+            faltantes.push({ nombre: ingrediente.name, faltante: ingrediente.amount - ingredienteAlmacen.cantidad });
           }
+        } else {
+          faltantes.push({ nombre: ingrediente.name });
         }
       });
 
-      // Calcular porcentaje de coincidencia en ingredientes
-      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      // Calcular porcentaje de coincidencia
+      const porcentajeCoincidencia = (ingredientesCoinciden / ingredientesReceta.length) * 100;
 
-      // Devolver receta si cumple con el 80% o más de coincidencia
-      return porcentajeCoincidencia >= 80 || cantidadSuficiente;
-    });
+      // Filtrar las recetas que cumplan con el 80% de coincidencia
+      if (porcentajeCoincidencia >= 80) {
+        return {
+          ...receta,
+          faltantes,
+          porcentajeCoincidencia,
+        };
+      }
+      return null;
+    }));
 
-    res.json({ recomendaciones });
+    // Filtrar recetas nulas y devolver solo las que cumplen con el criterio
+    const recetasRecomendadas = recomendaciones.filter(receta => receta !== null);
+
+    res.json({ recomendaciones: recetasRecomendadas });
   } catch (error) {
     console.error('Error al obtener recomendaciones:', error);
     res.status(500).json({ error: 'Error al obtener recomendaciones' });
   }
 });
+
+// Función auxiliar para obtener ingredientes de la receta desde Spoonacular
+async function obtenerIngredientesReceta(recipeId) {
+  try {
+    const response = await axios.get(`https://api.spoonacular.com/recipes/${recipeId}/information`, {
+      params: {
+        apiKey: process.env.SPOONACULAR_API_KEY
+      }
+    });
+    return response.data.extendedIngredients.map(ingrediente => ({
+      name: ingrediente.name,
+      amount: ingrediente.amount,
+    }));
+  } catch (error) {
+    throw new Error('Error al obtener ingredientes de Spoonacular: ' + error.message);
+  }
+}
 //========================================================INICIAR SERVIDOR========================================
 // Iniciar el servidor en el puerto 4000
 app.listen(PORT, () => {
