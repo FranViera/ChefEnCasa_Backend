@@ -1066,50 +1066,49 @@ function convertirMedida(cantidad, unidad) {
 
 //============================================LISTA DE COMPRAS====================================
 // Descontar ingredientes y generar lista de compras
-app.post('/preparar-receta', authenticateToken, async (req, res) => {
+app.post('/preparar-receta-spoonacular', authenticateToken, async (req, res) => {
   const { recipeId } = req.body;
 
   try {
     const db = await connectToDatabase();
-    const receta = await db.collection('recetas').findOne({ recipeId });
-    if (!receta) return res.status(404).json({ message: 'Receta no encontrada' });
-
+    const receta = await obtenerRecetaDeSpoonacular(recipeId);
+    const ingredientesReceta = receta.extendedIngredients;
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
-    if (!almacen) return res.status(404).json({ message: 'Almacén no encontrado' });
 
-    const faltanIngredientes = [];
-    const ingredientesParaDescontar = [];
+    if (!almacen) {
+      return res.status(404).json({ message: 'Almacén no encontrado' });
+    }
 
-    for (const ingredienteReceta of receta.ingredients) {
-      try {
-        const cantidadRecetaEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
-        const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name);
-        
-        if (ingredienteEnAlmacen) {
-          const cantidadAlmacenEnGramos = convertirMedida(ingredienteEnAlmacen.cantidad, ingredienteEnAlmacen.unit);
-          if (cantidadAlmacenEnGramos < cantidadRecetaEnGramos) {
-            faltanIngredientes.push({
-              nombre: ingredienteReceta.name,
-              faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
-            });
-          } else {
-            ingredientesParaDescontar.push({
-              nombre: ingredienteReceta.name,
-              cantidad: cantidadRecetaEnGramos / conversiones[ingredienteEnAlmacen.unit.toLowerCase()],
-            });
-          }
-        } else {
-          faltanIngredientes.push({
-            nombre: ingredienteReceta.name,
-            faltante: cantidadRecetaEnGramos,
-          });
-        }
-      } catch (error) {
-        console.warn(`Error al convertir la unidad de ${ingredienteReceta.name}: ${error.message}`);
+    let faltanIngredientes = [];
+    let ingredientesParaDescontar = [];
+
+    for (const ingredienteReceta of ingredientesReceta) {
+      const nombreTraducido = await convertirIngredienteAEspanol(ingredienteReceta.name.toLowerCase());
+      const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === nombreTraducido);
+      const cantidadEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
+
+      if (!cantidadEnGramos || isNaN(cantidadEnGramos)) {
+        console.error(`Error al convertir la cantidad de ${ingredienteReceta.name}`);
+        return res.status(500).json({ error: `Error al convertir la cantidad de ${ingredienteReceta.name}` });
+      }
+
+      // Verificar disponibilidad de ingredientes
+      if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadEnGramos) {
+        faltanIngredientes.push({
+          nombre: nombreTraducido,
+          cantidad: cantidadEnGramos,
+          comprado: false  // Asegurando que cada ingrediente que falta tenga un estado de compra inicial
+        });
+      } else {
+        ingredientesParaDescontar.push({
+          nombre: nombreTraducido,
+          cantidad: cantidadEnGramos
+        });
       }
     }
 
+    // Crear lista de compras si faltan ingredientes
     if (faltanIngredientes.length > 0) {
       await db.collection('listasDeCompras').updateOne(
         { usuarioId },
@@ -1123,6 +1122,7 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
       });
     }
 
+    // Descontar ingredientes si están todos disponibles
     for (const ingrediente of ingredientesParaDescontar) {
       await db.collection('almacen').updateOne(
         { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
@@ -1134,6 +1134,24 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error al preparar la receta:', error.message);
     res.status(500).json({ error: `Error al preparar la receta: ${error.message}` });
+  }
+});
+
+// VER LISTA DE COMPRAS
+app.get('/lista-de-compras', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+    const listaDeCompras = await db.collection('listasDeCompras').findOne({ usuarioId, completada: false });
+
+    if (!listaDeCompras) {
+      return res.status(200).json({ message: 'No tienes ningún ingrediente en tu lista de compras', listaVacia: true });
+    }
+
+    // Responder con la lista de compras si existe
+    res.status(200).json({ ...listaDeCompras, listaVacia: false });
+  } catch (error) {
+    res.status(500).json({ error: `Error al obtener la lista de compras: ${error.message}` });
   }
 });
 
