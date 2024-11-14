@@ -793,7 +793,25 @@ const conversiones = {
   "pint": 470,        // 1 pint = 473 ml
   "quart": 946,       // 1 quart = 946 ml
   "gallon": 3785,     // 1 gallon = 3785 ml
+  "Tb": 15,           // 1 Tb = 15 gramos
+  "handful": 50,      // 1 handful = 50 gramos
+  "bunch": 100,       // 1 bunch = 100 gramos
+  "pound": 450,   // 1 pound = 450 gramos
+  "sprig": 5,         // 1 sprig = 5 gramos
+  "g": 1,             // 1 g = 1 gramo
+  "small bunch": 50,  // 1 small bunch = 50 gramos
+  "bunches": 100,     // 1 bunch = 100 gramos
+  "small sprig": 2.5, // 1 small sprig = 2.5 gramos
+  "pinches": 0.5,     // 1 pinch = 0.5 gramos
+  "dashes": 0.5,      // 1 dash = 0.5 gramos
+  "medium size": 100, // 1 medium size = 100 gramos
   "medium": 100,      // 1 medium = 100 gramos
+  "large size": 200,  // 1 large size = 200 gramos
+  "leaf": 10,
+  "large handful": 75,
+  "piece": 50,
+  "large can": 600,
+  "can": 400,
 };
 
 // Función para convertir una cantidad a gramos o mililitros
