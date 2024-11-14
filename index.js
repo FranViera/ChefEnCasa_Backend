@@ -812,6 +812,18 @@ const conversiones = {
   "piece": 50,
   "large can": 600,
   "can": 400,
+  "bag": 100, // 1 bag = 100 gramos
+  "box": 100, // 1 box = 100 gramos
+  "stalk": 100, // 1 stalk = 100 gramos
+  "stick": 50, // 1 stick = 100 gramos
+  "dashe": 0.5, // 1 dash = 0.5 gramos
+  "dash": 0.5, // 1 dash = 0.5 gramos
+  "8-inch": 100, // 1 8-inch = 100 gramos
+  "inch": 15, // 1 inch = 15 gramos
+  "small head": 100, // 1 small head = 100 gramos
+  "large head": 200, // 1 large head = 200 gramos
+  "medium head": 150, // 1 medium head = 150 gramos
+  "fillet": 200, // 1 fillet = 200 gramos
 };
 
 // Función para convertir una cantidad a gramos o mililitros
