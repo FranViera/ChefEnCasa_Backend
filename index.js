@@ -826,26 +826,34 @@ const conversiones = {
   "fillet": 200, // 1 fillet = 200 gramos
 };
 
-// Función para convertir una cantidad a gramos o mililitros
+const unidadesDesconocidas = new Set();
+
 function convertirMedida(cantidad, unidad) {
-  // Verificar si la unidad es una cadena vacía o nula
+  // Asignar una unidad por defecto si está vacía
   if (!unidad || unidad.trim() === '') {
     console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto.`);
-    unidad = 'gram'; // Asignar una unidad por defecto si está vacía, como 'gram'
+    unidad = 'gram';
   }
 
   // Convertir la unidad a singular si es plural
   if (unidad.endsWith('s')) {
-    unidad = unidad.slice(0, -1); // Quitar la 's' final para convertir a singular
+    unidad = unidad.slice(0, -1);
   }
 
+  // Intentar encontrar el factor de conversión
   const conversionFactor = conversiones[unidad.toLowerCase()];
   if (!conversionFactor) {
-    throw new Error(`Unidad desconocida: ${unidad}`);
+    console.warn(`Unidad desconocida: ${unidad}. Usando 'gram' como valor por defecto.`);
+    unidadesDesconocidas.add(unidad);
+    return cantidad; // Devuelve la cantidad sin conversión si la unidad es desconocida
   }
 
   return cantidad * conversionFactor;
 }
+// Mostrar las unidades desconocidas al final para revisarlas
+console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
+
+
 //============================================ALMACEN=============================================
 //================================================================================================
 // Revisar almacén
