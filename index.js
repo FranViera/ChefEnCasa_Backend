@@ -614,13 +614,27 @@ app.get('/receta/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Receta no encontrada en la base de datos' });
     }
 
-    res.json(receta);
+    // Convertir las cantidades de los ingredientes
+    const ingredientesConvertidos = receta.ingredients.map((ingrediente) => {
+      const cantidadConvertida = convertirMedida(ingrediente.amount, ingrediente.unit, ingrediente.name);
+      return {
+        ...ingrediente,
+        amount: cantidadConvertida,
+        unit: 'gram'  // O la unidad en la que desees mostrarlo, como gramos
+      };
+    });
+
+    res.json({
+      ...receta,
+      ingredients: ingredientesConvertidos,
+    });
   } catch (error) {
     console.error('Error al obtener detalles de la receta:', error.message);
     res.status(500).json({ message: 'Error al obtener detalles de la receta' });
   }
 });
 
+/*
 // Función para obtener detalles de la receta desde Spoonacular
 async function obtenerRecetaDeSpoonacular(recipeId) {
   try {
@@ -635,7 +649,7 @@ async function obtenerRecetaDeSpoonacular(recipeId) {
     throw new Error('Error al obtener la receta de Spoonacular: ' + error.message);
   }
 }
-
+*/
 //===================================================RECLAMOS=================================================
 // Ruta para enviar un reclamo (usuario)
 app.post('/reclamos', authenticateToken, async (req, res) => {
