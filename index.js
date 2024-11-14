@@ -328,78 +328,150 @@ function checkRole(role) {
   };
 }
 
+//=============================================================IMPORTAR RECETAS ===============================================
+// Ruta para importar recetas en lotes desde Spoonacular y almacenarlas en la base de datos
+app.post('/importar-recetas', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const cantidadRecetas = 50; // Cantidad de recetas a obtener por cada solicitud a la API
+    let recetasImportadas = 0;
+    let offset = 0;
+
+    while (recetasImportadas < 500) { // Puedes ajustar el límite total de recetas
+      const params = {
+        apiKey: process.env.SPOONACULAR_API_KEY,
+        number: cantidadRecetas,
+        offset: offset,
+      };
+
+      const response = await axios.get(`${SPOONACULAR_API_BASE_URL}/recipes/complexSearch`, { params });
+      const recetas = response.data.results;
+
+      if (!recetas || recetas.length === 0) {
+        break;
+      }
+
+      for (const receta of recetas) {
+        const recetaCompleta = await obtenerRecetaDeSpoonacular(receta.id);
+        const recetaTraducida = {
+          recipeId: recetaCompleta.id,
+          title: await translateText(recetaCompleta.title, 'es'),
+          image: recetaCompleta.image,
+          ingredients: await Promise.all(recetaCompleta.extendedIngredients.map(async (ingrediente) => ({
+            name: await translateText(ingrediente.name, 'es'),
+            amount: ingrediente.amount,
+            unit: ingrediente.unit,
+          }))),
+          instructions: recetaCompleta.instructions ? await translateText(recetaCompleta.instructions, 'es') : 'No disponible',
+          readyInMinutes: recetaCompleta.readyInMinutes,
+          servings: recetaCompleta.servings,
+          type: recetaCompleta.dishTypes ? recetaCompleta.dishTypes.join(', ') : 'No especificado',
+          dateAdded: new Date()
+        };
+
+        // Guardar en la base de datos si no existe
+        await db.collection('recetas').updateOne(
+          { recipeId: recetaCompleta.id },
+          { $set: recetaTraducida },
+          { upsert: true }
+        );
+        recetasImportadas++;
+      }
+
+      offset += cantidadRecetas;
+      console.log(`Importadas ${recetasImportadas} recetas hasta ahora...`);
+    }
+
+    res.status(200).json({ message: 'Recetas importadas y almacenadas en la base de datos', total: recetasImportadas });
+  } catch (error) {
+    console.error('Error al importar recetas:', error.message);
+    res.status(500).json({ error: 'Error al importar recetas' });
+  }
+});
+
+// Función auxiliar para obtener detalles de la receta desde Spoonacular
+async function obtenerRecetaDeSpoonacular(recipeId) {
+  try {
+    const response = await axios.get(`https://api.spoonacular.com/recipes/${recipeId}/information`, {
+      params: {
+        apiKey: process.env.SPOONACULAR_API_KEY
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error('Error al obtener la receta de Spoonacular: ' + error.message);
+  }
+}
+
+
 //=============================================================BUSCAR RECETAS====================================================
 //Ahora busca todas las recetas sin filtro "ingrediente", apareceran todas las recetas a menos que el usuario filtre
 //por ingrediente u otro filtro
 app.get('/api/recetas', authenticateToken, async (req, res) => {
   let query = req.query.q || '';
-  if (query) {
-    query = await convertirIngredienteAEspanol(query); // Asegúrate de que el valor esté listo
-  }
   const time = req.query.time || null;
   const maxServings = req.query.maxServings || null;
   const diet = req.query.diet || null;
 
   try {
-    const usuario = await usersCollection.findOne({ _id: new ObjectId(req.user.id) });
-    const params = {
-      apiKey: SPOONACULAR_API_KEY,
-      query: query || null,
-      number: 10,
-      diet: usuario.diet || diet || null,
-      excludeIngredients: usuario.allergies ? usuario.allergies.join(',') : null,
-    };
+    const db = await connectToDatabase();
 
-    if (time) params.maxReadyTime = time;
-    if (maxServings) params.maxServings = maxServings;
+    // Búsqueda en la base de datos
+    let recetas = await db.collection('recetas').find({
+      title: { $regex: new RegExp(query, 'i') },
+      readyInMinutes: time ? { $lte: Number(time) } : { $exists: true },
+      servings: maxServings ? { $lte: Number(maxServings) } : { $exists: true }
+    }).limit(10).toArray();
 
-    const response = await axios.get(`${SPOONACULAR_API_BASE_URL}/recipes/complexSearch`, { params });
-    console.log("Parámetros enviados a Spoonacular:", params);
-    console.log("Respuesta completa de Spoonacular:", response.data);
-
-    if (response.status === 402) {
-      return res.status(402).json({ error: 'Límite de solicitudes a la API de Spoonacular alcanzado. Intente más tarde.' });
-    }
-
-    const recetas = response.data.results || [];
-
+    // Si no hay resultados en la base de datos, buscar en Spoonacular
     if (recetas.length === 0) {
-      return res.status(200).json({ message: "No se encontraron recetas.", results: [] });
-    }
+      const params = {
+        apiKey: process.env.SPOONACULAR_API_KEY,
+        query,
+        number: 10,
+        maxReadyTime: time,
+        maxServings,
+        diet
+      };
 
-    const recetasTraducidas = await Promise.all(recetas.map(async receta => {
-      try {
-        const tituloTraducido = await translateText(receta.title, 'es');
-        let instruccionesTraducidas = receta.instructions;
-        if (receta.instructions) {
-          try {
-            instruccionesTraducidas = await translateText(receta.instructions, 'es');
-          } catch (error) {
-            console.error(`Error al traducir instrucciones de la receta ${receta.title}:`, error);
-          }
-        }
+      const response = await axios.get(`${SPOONACULAR_API_BASE_URL}/recipes/complexSearch`, { params });
+      recetas = await Promise.all(response.data.results.map(async receta => {
+        const recetaCompleta = await obtenerRecetaDeSpoonacular(receta.id);
 
-        return { 
-          ...receta, 
-          title: tituloTraducido,
-          instructions: instruccionesTraducidas || 'No hay instrucciones disponibles en español'
+        // Traducir y guardar la receta en la base de datos
+        const recetaTraducida = {
+          recipeId: recetaCompleta.id,
+          title: await translateText(recetaCompleta.title, 'es'),
+          image: recetaCompleta.image,
+          ingredients: await Promise.all(recetaCompleta.extendedIngredients.map(async (ingrediente) => ({
+            name: await translateText(ingrediente.name, 'es'),
+            amount: ingrediente.amount,
+            unit: ingrediente.unit,
+          }))),
+          instructions: recetaCompleta.instructions ? await translateText(recetaCompleta.instructions, 'es') : 'No disponible',
+          readyInMinutes: recetaCompleta.readyInMinutes,
+          servings: recetaCompleta.servings,
+          type: recetaCompleta.dishTypes ? recetaCompleta.dishTypes.join(', ') : 'No especificado',
+          dateAdded: new Date()
         };
-      } catch (error) {
-        console.error(`Error al traducir título de la receta: ${receta.title}`, error);
-        return receta;
-      }
-    }));
 
-    res.json({ results: recetasTraducidas });
-  } catch (error) {
-    console.error('Error al buscar o traducir recetas:', error.message);
-    if (error.response && error.response.status === 402) {
-      res.status(402).json({ error: 'Error: Límite de uso de la API alcanzado. Por favor, intente de nuevo más tarde.' });
-    } else {
-      res.status(500).json({ error: 'Error al buscar o traducir recetas' });
+        await db.collection('recetas').updateOne(
+          { recipeId: recetaCompleta.id },
+          { $set: recetaTraducida },
+          { upsert: true }
+        );
+
+        return recetaTraducida;
+      }));
     }
+
+    res.json({ results: recetas });
+  } catch (error) {
+    console.error('Error al buscar recetas:', error.message);
+    res.status(500).json({ error: 'Error al buscar recetas' });
   }
 });
+
 
 // Nueva ruta para recomendaciones
 app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
@@ -537,46 +609,48 @@ testTranslation();
 
 // Obtener detalles de una receta desde Spoonacular y traducirlos al español
 app.get('/receta/:id', authenticateToken, async (req, res) => {
-  const recipeId = req.params.id; // Obtener el ID de la receta desde la URL
+  const recipeId = parseInt(req.params.id, 10);
 
   try {
-    // Llamar a la API de Spoonacular para obtener la información de la receta
-    const receta = await obtenerRecetaDeSpoonacular(recipeId);
+    const db = await connectToDatabase();
+    let receta = await db.collection('recetas').findOne({ recipeId });
 
-    // Traducir el título de la receta
-    const tituloTraducido = await translateText(receta.title, 'es');
+    // Si la receta no está en la base de datos, obtenerla de Spoonacular y guardarla
+    if (!receta) {
+      receta = await obtenerRecetaDeSpoonacular(recipeId);
 
-    // Traducir los ingredientes de la receta
-    const ingredientesTraducidos = await Promise.all(receta.extendedIngredients.map(async ingrediente => {
-      const nombreTraducido = await translateText(ingrediente.name, 'es'); // Traducir el nombre del ingrediente al español
-      const descripcionTraducida = await translateText(ingrediente.original, 'es'); // Traducir la descripción completa
-      return { 
-        ...ingrediente, 
-        name: nombreTraducido,  // Sobrescribir el campo 'name' con la traducción
-        original: descripcionTraducida  // Sobrescribir la descripción completa
+      // Traducir y almacenar
+      const recetaTraducida = {
+        recipeId: receta.id,
+        title: await translateText(receta.title, 'es'),
+        image: receta.image,
+        ingredients: await Promise.all(receta.extendedIngredients.map(async (ingrediente) => ({
+          name: await translateText(ingrediente.name, 'es'),
+          amount: ingrediente.amount,
+          unit: ingrediente.unit,
+        }))),
+        instructions: receta.instructions ? await translateText(receta.instructions, 'es') : 'No disponible',
+        readyInMinutes: receta.readyInMinutes,
+        servings: receta.servings,
+        type: receta.dishTypes ? receta.dishTypes.join(', ') : 'No especificado',
+        dateAdded: new Date()
       };
-    }));
 
-    // Traducir las instrucciones de la receta si existen
-    let instruccionesTraducidas = '';
-    if (receta.instructions) {
-      instruccionesTraducidas = await translateText(receta.instructions, 'es');
+      await db.collection('recetas').updateOne(
+        { recipeId: receta.id },
+        { $set: recetaTraducida },
+        { upsert: true }
+      );
+
+      receta = recetaTraducida;
     }
 
-    // Devolver la receta traducida
-    res.status(200).json({
-      title: tituloTraducido,
-      ingredients: ingredientesTraducidos,
-      instructions: instruccionesTraducidas || 'No hay instrucciones disponibles',
-      readyInMinutes: receta.readyInMinutes,
-      servings: receta.servings,
-      image: receta.image
-    });
-
+    res.json(receta);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener o traducir la receta de Spoonacular', error: error.message });
+    res.status(500).json({ message: 'Error al obtener detalles de la receta', error: error.message });
   }
 });
+
 // Función para obtener detalles de la receta desde Spoonacular
 async function obtenerRecetaDeSpoonacular(recipeId) {
   try {
