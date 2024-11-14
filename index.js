@@ -741,8 +741,15 @@ const conversiones = {
   "can": 300,         // 1 can = 300 gramos
   "slice": 5,         // 1 slice = 5 gramos
   "pinch": 0.5,       // 1 pinch = 0.5 gramos
-  
-
+  "container": 500,   // 1 container = 500 gramos
+  "dash": 0.5,        // 1 dash = 0.5 gramos
+  "bunch": 100,       // 1 bunch = 100 gramos
+  "bottle": 250,      // 1 bottle = 250 gramos
+  "jar": 200,         // 1 jar = 200 gramos
+  "bowl": 300,        // 1 bowl = 300 gramos
+  "pint": 473,        // 1 pint = 473 ml
+  "quart": 946,       // 1 quart = 946 ml
+  "gallon": 3785,     // 1 gallon = 3785 ml
 };
 
 // Función para convertir una cantidad a gramos o mililitros
