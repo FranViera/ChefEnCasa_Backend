@@ -1040,7 +1040,7 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
     res.status(500).json({ error: `Error al preparar la receta: ${error.message}` });
   }
 });
-*/
+
 
 // Función mejorada para convertir la cantidad y unidad a gramos o mililitros
 function convertirMedida(cantidad, unidad) {
@@ -1063,6 +1063,7 @@ function convertirMedida(cantidad, unidad) {
 
   return cantidad * conversionFactor;
 }
+*/
 
 //============================================LISTA DE COMPRAS====================================
 // Descontar ingredientes y generar lista de compras
@@ -1071,8 +1072,11 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
 
   try {
     const db = await connectToDatabase();
-    const receta = await obtenerRecetaDeSpoonacular(recipeId);
-    const ingredientesReceta = receta.extendedIngredients;
+    const receta = await db.collection('recetas').findOne({ recipeId });
+    if (!receta) {
+      return res.status(404).json({ message: 'Receta no encontrada' });
+    }
+
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
 
@@ -1080,12 +1084,11 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Almacén no encontrado' });
     }
 
-    let faltanIngredientes = [];
-    let ingredientesParaDescontar = [];
+    const faltanIngredientes = [];
+    const ingredientesParaDescontar = [];
 
-    for (const ingredienteReceta of ingredientesReceta) {
-      const nombreTraducido = await convertirIngredienteAEspanol(ingredienteReceta.name.toLowerCase());
-      const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === nombreTraducido);
+    for (const ingredienteReceta of receta.ingredients) {
+      // Convertir la cantidad de la receta a gramos usando la función de conversión
       const cantidadEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
 
       if (!cantidadEnGramos || isNaN(cantidadEnGramos)) {
@@ -1093,17 +1096,20 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
         return res.status(500).json({ error: `Error al convertir la cantidad de ${ingredienteReceta.name}` });
       }
 
-      // Verificar disponibilidad de ingredientes
+      // Buscar el ingrediente en el almacén del usuario
+      const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name);
+
       if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadEnGramos) {
+        // Si no hay suficiente cantidad en el almacén, agregar a la lista de faltantes
         faltanIngredientes.push({
-          nombre: nombreTraducido,
-          cantidad: cantidadEnGramos,
-          comprado: false  // Asegurando que cada ingrediente que falta tenga un estado de compra inicial
+          nombre: ingredienteReceta.name,
+          cantidad: cantidadEnGramos, // Usar la cantidad en gramos
         });
       } else {
+        // Si hay suficiente cantidad, agregar a la lista de ingredientes para descontar
         ingredientesParaDescontar.push({
-          nombre: nombreTraducido,
-          cantidad: cantidadEnGramos
+          nombre: ingredienteReceta.name,
+          cantidad: cantidadEnGramos, // Usar la cantidad en gramos
         });
       }
     }
@@ -1136,6 +1142,28 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
     res.status(500).json({ error: `Error al preparar la receta: ${error.message}` });
   }
 });
+
+// Función para convertir la cantidad y unidad a gramos o mililitros
+function convertirMedida(cantidad, unidad) {
+  // Verificar si la unidad es una cadena vacía o nula
+  if (!unidad || unidad.trim() === '') {
+    console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto.`);
+    unidad = 'gram'; // Asignar una unidad por defecto si está vacía, como 'gram'
+  }
+
+  // Convertir la unidad a singular si es plural
+  if (unidad.endsWith('s')) {
+    unidad = unidad.slice(0, -1); // Quitar la 's' final para convertir a singular
+  }
+
+  const conversionFactor = conversiones[unidad.toLowerCase()];
+  if (!conversionFactor) {
+    console.error(`Unidad desconocida: ${unidad}`);
+    return null;
+  }
+
+  return cantidad * conversionFactor;
+}
 
 // VER LISTA DE COMPRAS
 app.get('/lista-de-compras', authenticateToken, async (req, res) => {
