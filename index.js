@@ -1227,23 +1227,6 @@ app.get('/lista-de-compras', authenticateToken, async (req, res) => {
   }
 });
 
-// VER LISTA DE COMPRAS
-app.get('/lista-de-compras', authenticateToken, async (req, res) => {
-  try {
-    const db = await connectToDatabase();
-    const usuarioId = new ObjectId(req.user.id);
-    const listaDeCompras = await db.collection('listasDeCompras').findOne({ usuarioId, completada: false });
-
-    if (!listaDeCompras) {
-      return res.status(200).json({ message: 'No tienes ningún ingrediente en tu lista de compras', listaVacia: true });
-    }
-
-    res.status(200).json({ ...listaDeCompras, listaVacia: false });
-  } catch (error) {
-    res.status(500).json({ error: `Error al obtener la lista de compras: ${error.message}` });
-  }
-});
-
 // Marcar como comprada la lista o eliminarla
 app.put('/lista-de-compras/marcar-comprada', authenticateToken, async (req, res) => {
   try {
