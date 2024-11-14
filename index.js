@@ -971,7 +971,7 @@ app.put('/almacen/aumentar', authenticateToken, async (req, res) => {
 // ============================================ PREPARAR RECETA ====================================
 // Descontar ingredientes del almacén al preparar receta desde Spoonacular y generar una única lista de compras
 /*
-app.post('/preparar-receta-spoonacular', authenticateToken, async (req, res) => {
+app.post('/preparar-receta', authenticateToken, async (req, res) => {
   const { recipeId } = req.body;
 
   try {
