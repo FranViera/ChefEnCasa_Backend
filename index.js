@@ -506,8 +506,9 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
       if (porcentajeCoincidencia >= 70) {
         return { 
           ...receta, 
-          faltantes, 
-          porcentajeCoincidencia: porcentajeCoincidencia.toFixed(2) // Redondear a dos decimales
+          faltantes,
+          porcentajeCoincidencia
+          //porcentajeCoincidencia: porcentajeCoincidencia.toFixed(2) // Redondear a dos decimales
         };
       }
       
