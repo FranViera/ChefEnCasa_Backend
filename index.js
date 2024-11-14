@@ -456,44 +456,33 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
       let cantidadesSuficientes = 0;
 
       receta.ingredients.forEach((ingrediente) => {
-        // Convertir la cantidad del ingrediente de la receta a gramos
+        console.log(`Procesando ingrediente: ${ingrediente.name} - Cantidad: ${ingrediente.amount} ${ingrediente.unit}`);
+        
         const cantidadRecetaEnGramos = convertirMedida(ingrediente.amount, ingrediente.unit);
-
-        if (!cantidadRecetaEnGramos || isNaN(cantidadRecetaEnGramos)) {
-          console.error(`Error al convertir la cantidad de ${ingrediente.name}`);
-          return;
-        }
-
-        // Buscar el ingrediente en el almacén del usuario
+        console.log(`Cantidad en receta convertida a gramos: ${cantidadRecetaEnGramos}`);
+        
         const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
-
+      
         if (ingredienteEnAlmacen) {
-          // Coincidencia de ingrediente
-          ingredientesCoinciden++;
-
-          // Convertir la cantidad del ingrediente en el almacén a gramos
+          console.log(`Ingrediente encontrado en almacén: ${ingredienteEnAlmacen.nombre}`);
           const cantidadAlmacenEnGramos = convertirMedida(ingredienteEnAlmacen.cantidad, ingredienteEnAlmacen.unit);
-
-          if (!cantidadAlmacenEnGramos || isNaN(cantidadAlmacenEnGramos)) {
-            console.error(`Error al convertir la cantidad de ${ingredienteEnAlmacen.nombre}`);
-            return;
-          }
-
-          // Verificar si la cantidad en el almacén es suficiente
+          console.log(`Cantidad en almacén convertida a gramos: ${cantidadAlmacenEnGramos}`);
+      
           if (cantidadAlmacenEnGramos >= cantidadRecetaEnGramos) {
             cantidadesSuficientes++;
           } else {
-            // Si la cantidad en el almacén es menor, agregar a faltantes
             faltantes.push({
               nombre: ingrediente.name,
               faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
             });
+            console.log(`Faltante añadido: ${ingrediente.name} - ${cantidadRecetaEnGramos - cantidadAlmacenEnGramos} gramos`);
           }
         } else {
-          // Si el ingrediente no está en el almacén, agregar a faltantes
           faltantes.push({ nombre: ingrediente.name, faltante: cantidadRecetaEnGramos });
+          console.log(`Ingrediente no encontrado en almacén, añadido a faltantes: ${ingrediente.name}`);
         }
       });
+
 
       // Calcular porcentajes de coincidencia
       const porcentajeCoincidenciaIngredientes = (ingredientesCoinciden / receta.ingredients.length) * 100;
@@ -522,6 +511,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
   }
 });
 
+/*
 // Función de conversión de cantidades a gramos (asegúrate de tener el mapa de conversiones configurado correctamente)
 function convertirMedida(cantidad, unidad) {
   if (!unidad || unidad.trim() === '') {
@@ -541,6 +531,7 @@ function convertirMedida(cantidad, unidad) {
 
   return cantidad * conversionFactor;
 }
+*/
 
 /*
 // Función auxiliar para obtener y traducir ingredientes de la receta desde Spoonacular
