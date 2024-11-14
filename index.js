@@ -440,32 +440,45 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
     // Obtener ingredientes del almacén del usuario
     const almacen = await db.collection('almacen').findOne({ usuarioId });
+    console.log('Almacén del usuario:', almacen); // Verifica el contenido del almacén del usuario
+
     if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      console.log('No hay ingredientes en el almacén');
       return res.status(200).json({ message: 'No hay ingredientes en el almacén', recomendaciones: [] });
     }
 
     // Consultar la base de datos de recetas y filtrar según los ingredientes
     const recomendaciones = await db.collection('recetas').find().toArray();
+    console.log('Recetas encontradas en la base de datos:', recomendaciones); // Verifica la lista de recetas en la base de datos
 
     const recetasRecomendadas = recomendaciones.map((receta) => {
       const faltantes = [];
       let ingredientesCoinciden = 0;
 
+      console.log(`Procesando receta: ${receta.title}`); // Muestra el título de cada receta procesada
+
       receta.ingredients.forEach((ingrediente) => {
         const ingredienteAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
         if (ingredienteAlmacen) {
+          console.log(`Ingrediente encontrado en almacén: ${ingrediente.name}, cantidad en almacén: ${ingredienteAlmacen.cantidad}, cantidad requerida: ${ingrediente.amount}`);
           ingredientesCoinciden++;
           if (ingredienteAlmacen.cantidad < ingrediente.amount) {
             faltantes.push({ nombre: ingrediente.name, faltante: ingrediente.amount - ingredienteAlmacen.cantidad });
+            console.log(`Cantidad insuficiente para ${ingrediente.name}, faltan: ${ingrediente.amount - ingredienteAlmacen.cantidad}`);
           }
         } else {
           faltantes.push({ nombre: ingrediente.name });
+          console.log(`Ingrediente faltante: ${ingrediente.name}`);
         }
       });
 
       const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      console.log(`Porcentaje de coincidencia para receta ${receta.title}: ${porcentajeCoincidencia}%`);
+
       return porcentajeCoincidencia >= 80 ? { ...receta, faltantes, porcentajeCoincidencia } : null;
     }).filter(Boolean);
+
+    console.log('Recetas recomendadas:', recetasRecomendadas); // Muestra las recetas que cumplen con el porcentaje de coincidencia
 
     res.json({ recomendaciones: recetasRecomendadas });
   } catch (error) {
