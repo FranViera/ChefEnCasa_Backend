@@ -1072,15 +1072,17 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
 
   try {
     const db = await connectToDatabase();
+    console.log("Conectado a la base de datos");
     const receta = await db.collection('recetas').findOne({ recipeId });
     if (!receta) {
+      console.log("Receta no encontrada");
       return res.status(404).json({ message: 'Receta no encontrada' });
     }
 
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
-
     if (!almacen) {
+      console.log("Almacén no encontrado");
       return res.status(404).json({ message: 'Almacén no encontrado' });
     }
 
@@ -1090,6 +1092,7 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
     for (const ingredienteReceta of receta.ingredients) {
       // Convertir la cantidad de la receta a gramos usando la función de conversión
       const cantidadEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
+      console.log(`Ingrediente: ${ingredienteReceta.name}, Cantidad convertida: ${cantidadEnGramos}g`);
 
       if (!cantidadEnGramos || isNaN(cantidadEnGramos)) {
         console.error(`Error al convertir la cantidad de ${ingredienteReceta.name}`);
@@ -1100,22 +1103,21 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
       const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name);
 
       if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadEnGramos) {
-        // Si no hay suficiente cantidad en el almacén, agregar a la lista de faltantes
         faltanIngredientes.push({
           nombre: ingredienteReceta.name,
-          cantidad: cantidadEnGramos, // Usar la cantidad en gramos
+          cantidad: cantidadEnGramos,
         });
+        console.log(`Faltante: ${ingredienteReceta.name} - ${cantidadEnGramos}g`);
       } else {
-        // Si hay suficiente cantidad, agregar a la lista de ingredientes para descontar
         ingredientesParaDescontar.push({
           nombre: ingredienteReceta.name,
-          cantidad: cantidadEnGramos, // Usar la cantidad en gramos
+          cantidad: cantidadEnGramos,
         });
       }
     }
 
-    // Crear lista de compras si faltan ingredientes
     if (faltanIngredientes.length > 0) {
+      console.log("Generando lista de compras por ingredientes faltantes");
       await db.collection('listasDeCompras').updateOne(
         { usuarioId },
         { $set: { ingredientes: faltanIngredientes, completada: false } },
@@ -1128,12 +1130,12 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
       });
     }
 
-    // Descontar ingredientes si están todos disponibles
     for (const ingrediente of ingredientesParaDescontar) {
       await db.collection('almacen').updateOne(
         { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
         { $inc: { 'ingredientes.$.cantidad': -ingrediente.cantidad } }
       );
+      console.log(`Descontando ${ingrediente.cantidad}g de ${ingrediente.nombre}`);
     }
 
     res.status(200).json({ message: 'Ingredientes descontados correctamente', compraNecesaria: false });
@@ -1145,15 +1147,13 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
 
 // Función para convertir la cantidad y unidad a gramos o mililitros
 function convertirMedida(cantidad, unidad) {
-  // Verificar si la unidad es una cadena vacía o nula
   if (!unidad || unidad.trim() === '') {
     console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto.`);
-    unidad = 'gram'; // Asignar una unidad por defecto si está vacía, como 'gram'
+    unidad = 'gram';
   }
 
-  // Convertir la unidad a singular si es plural
   if (unidad.endsWith('s')) {
-    unidad = unidad.slice(0, -1); // Quitar la 's' final para convertir a singular
+    unidad = unidad.slice(0, -1);
   }
 
   const conversionFactor = conversiones[unidad.toLowerCase()];
