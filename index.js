@@ -542,7 +542,7 @@ function convertirMedida(cantidad, unidad) {
   return cantidad * conversionFactor;
 }
 
-/*
+
 // Función de conversión de cantidades a gramos (asegúrate de tener el mapa de conversiones configurado correctamente)
 function convertirMedida(cantidad, unidad) {
   if (!unidad || unidad.trim() === '') {
@@ -562,7 +562,7 @@ function convertirMedida(cantidad, unidad) {
 
   return cantidad * conversionFactor;
 }
-*/
+
 
 /*
 // Función auxiliar para obtener y traducir ingredientes de la receta desde Spoonacular
