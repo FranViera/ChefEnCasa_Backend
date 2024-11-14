@@ -1066,7 +1066,7 @@ function convertirMedida(cantidad, unidad) {
 
 //============================================LISTA DE COMPRAS====================================
 // Descontar ingredientes y generar lista de compras
-app.post('/preparar-receta-spoonacular', authenticateToken, async (req, res) => {
+app.post('/preparar-receta', authenticateToken, async (req, res) => {
   const { recipeId } = req.body;
 
   try {
