@@ -453,6 +453,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
     const recetasRecomendadas = recomendaciones.map((receta) => {
       const faltantes = [];
       let ingredientesCoinciden = 0;
+      let cantidadesSuficientes = 0;
 
       receta.ingredients.forEach((ingrediente) => {
         // Convertir la cantidad del ingrediente de la receta a gramos
@@ -478,8 +479,11 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
             return;
           }
 
-          // Si la cantidad en el almacén es menor, agregar a faltantes
-          if (cantidadAlmacenEnGramos < cantidadRecetaEnGramos) {
+          // Verificar si la cantidad en el almacén es suficiente
+          if (cantidadAlmacenEnGramos >= cantidadRecetaEnGramos) {
+            cantidadesSuficientes++;
+          } else {
+            // Si la cantidad en el almacén es menor, agregar a faltantes
             faltantes.push({
               nombre: ingrediente.name,
               faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
@@ -491,15 +495,19 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
         }
       });
 
-      // Calcular porcentaje de coincidencia en ingredientes
+      // Calcular porcentajes de coincidencia
       const porcentajeCoincidenciaIngredientes = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      const porcentajeCoincidenciaCantidad = (cantidadesSuficientes / receta.ingredients.length) * 100;
 
-      // Considerar receta recomendada si cumple con al menos el 70% en coincidencia de ingredientes
-      if (porcentajeCoincidenciaIngredientes >= 70) {
+      // Calcular el porcentaje de coincidencia combinado
+      const porcentajeCoincidencia = (porcentajeCoincidenciaIngredientes + porcentajeCoincidenciaCantidad) / 2;
+
+      // Considerar receta recomendada si cumple con al menos el 70% en el porcentaje combinado
+      if (porcentajeCoincidencia >= 70) {
         return { 
           ...receta, 
           faltantes, 
-          porcentajeCoincidencia: porcentajeCoincidenciaIngredientes
+          porcentajeCoincidencia: porcentajeCoincidencia.toFixed(2) // Redondear a dos decimales
         };
       }
       
@@ -532,6 +540,7 @@ function convertirMedida(cantidad, unidad) {
 
   return cantidad * conversionFactor;
 }
+
 
 
 /*
