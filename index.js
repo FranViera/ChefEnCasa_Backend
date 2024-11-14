@@ -829,23 +829,21 @@ const conversiones = {
 const unidadesDesconocidas = new Set();
 
 function convertirMedida(cantidad, unidad, nombreIngrediente) {
-  // Configuración de unidad predeterminada dependiendo del ingrediente
+  // Configuración predeterminada para unidades vacías
   if (!unidad || unidad.trim() === '') {
     console.warn(`Unidad vacía para ${nombreIngrediente} con cantidad ${cantidad}. Asignando unidad por defecto.`);
-    // Ajusta la unidad predeterminada basada en el ingrediente
-    unidad = ['agua', 'caldo', 'jugo'].includes(nombreIngrediente.toLowerCase()) ? 'ml' : 'gram';
+    // Asignar unidades predeterminadas según el tipo de ingrediente
+    unidad = ['agua', 'caldo', 'jugo', 'leche', 'vinagre'].includes(nombreIngrediente.toLowerCase()) ? 'ml' : 'gram';
   }
 
-  // Convertir la unidad a singular si es plural
-  if (unidad.endsWith('s')) {
-    unidad = unidad.slice(0, -1);
-  }
+  // Normalizar a minúsculas y eliminar plural si existe
+  unidad = unidad.toLowerCase().endsWith('s') ? unidad.slice(0, -1).toLowerCase() : unidad.toLowerCase();
 
-  // Intentar obtener el factor de conversión
-  const conversionFactor = conversiones[unidad.toLowerCase()];
+  // Obtener el factor de conversión
+  const conversionFactor = conversiones[unidad];
 
   if (!conversionFactor) {
-    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente}. Utilizando cantidad sin conversión.`);
+    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente}. Usando cantidad sin conversión.`);
     unidadesDesconocidas.add(unidad);
     return cantidad; // Devolver la cantidad original si la unidad no se reconoce
   }
@@ -853,10 +851,10 @@ function convertirMedida(cantidad, unidad, nombreIngrediente) {
   return cantidad * conversionFactor;
 }
 
-// Al finalizar, muestra las unidades desconocidas para análisis
+// Al finalizar el proceso, muestra las unidades desconocidas para depuración
 process.on('exit', () => {
   if (unidadesDesconocidas.size > 0) {
-    console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
+    console.log("Unidades desconocidas encontradas durante la ejecución:", Array.from(unidadesDesconocidas));
   }
 });
 
