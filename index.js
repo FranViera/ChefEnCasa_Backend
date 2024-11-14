@@ -829,32 +829,29 @@ const conversiones = {
 const unidadesDesconocidas = new Set();
 
 function convertirMedida(cantidad, unidad, nombreIngrediente) {
-  // Configuración predeterminada para unidades vacías
   if (!unidad || unidad.trim() === '') {
     console.warn(`Unidad vacía para ${nombreIngrediente} con cantidad ${cantidad}. Asignando unidad por defecto.`);
-    // Asignar unidades predeterminadas según el tipo de ingrediente
-    unidad = ['agua', 'caldo', 'jugo', 'leche', 'vinagre'].includes(nombreIngrediente.toLowerCase()) ? 'ml' : 'gram';
+    unidad = ['agua', 'caldo', 'jugo'].includes(nombreIngrediente.toLowerCase()) ? 'ml' : 'gram';
   }
 
-  // Normalizar a minúsculas y eliminar plural si existe
-  unidad = unidad.toLowerCase().endsWith('s') ? unidad.slice(0, -1).toLowerCase() : unidad.toLowerCase();
+  // Normalizar unidad a minúsculas y singular
+  unidad = unidad.toLowerCase().endsWith('s') ? unidad.slice(0, -1) : unidad.toLowerCase();
 
-  // Obtener el factor de conversión
   const conversionFactor = conversiones[unidad];
 
   if (!conversionFactor) {
-    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente}. Usando cantidad sin conversión.`);
+    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente}. Utilizando cantidad sin conversión.`);
     unidadesDesconocidas.add(unidad);
-    return cantidad; // Devolver la cantidad original si la unidad no se reconoce
+    return cantidad;
   }
 
   return cantidad * conversionFactor;
 }
 
-// Al finalizar el proceso, muestra las unidades desconocidas para depuración
+// Al salir, muestra las unidades desconocidas encontradas
 process.on('exit', () => {
   if (unidadesDesconocidas.size > 0) {
-    console.log("Unidades desconocidas encontradas durante la ejecución:", Array.from(unidadesDesconocidas));
+    console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
   }
 });
 
