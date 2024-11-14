@@ -829,9 +829,9 @@ const conversiones = {
 const unidadesDesconocidas = new Set();
 
 function convertirMedida(cantidad, unidad) {
-  // Asignar una unidad por defecto si está vacía
+  // Manejar unidades vacías asignando una unidad predeterminada
   if (!unidad || unidad.trim() === '') {
-    console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto.`);
+    console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto 'gram'.`);
     unidad = 'gram';
   }
 
@@ -840,18 +840,23 @@ function convertirMedida(cantidad, unidad) {
     unidad = unidad.slice(0, -1);
   }
 
-  // Intentar encontrar el factor de conversión
   const conversionFactor = conversiones[unidad.toLowerCase()];
+  
   if (!conversionFactor) {
-    console.warn(`Unidad desconocida: ${unidad}. Usando 'gram' como valor por defecto.`);
+    console.warn(`Unidad desconocida: ${unidad}. Utilizando cantidad sin conversión.`);
     unidadesDesconocidas.add(unidad);
-    return cantidad; // Devuelve la cantidad sin conversión si la unidad es desconocida
+    return cantidad; // Devuelve la cantidad original sin conversión
   }
 
   return cantidad * conversionFactor;
 }
-// Mostrar las unidades desconocidas al final para revisarlas
-console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
+
+// Al finalizar, muestra las unidades desconocidas
+process.on('exit', () => {
+  if (unidadesDesconocidas.size > 0) {
+    console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
+  }
+});
 
 
 //============================================ALMACEN=============================================
