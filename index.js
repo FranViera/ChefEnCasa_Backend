@@ -460,7 +460,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
         const cantidadRecetaEnGramos = convertirMedida(ingrediente.amount, ingrediente.unit);
 
         if (!cantidadRecetaEnGramos || isNaN(cantidadRecetaEnGramos)) {
-          console.error(Error al convertir la cantidad de ${ingrediente.name});
+          console.error(`Error al convertir la cantidad de ${ingrediente.name}`);
           return;
         }
 
@@ -475,7 +475,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
           const cantidadAlmacenEnGramos = convertirMedida(ingredienteEnAlmacen.cantidad, ingredienteEnAlmacen.unit);
 
           if (!cantidadAlmacenEnGramos || isNaN(cantidadAlmacenEnGramos)) {
-            console.error(Error al convertir la cantidad de ${ingredienteEnAlmacen.nombre});
+            console.error(`Error al convertir la cantidad de ${ingredienteEnAlmacen.nombre}`);
             return;
           }
 
