@@ -1469,13 +1469,23 @@ app.post('/lista-de-compras/agregar', authenticateToken, async (req, res) => {
 
     if (listaExistente) {
       // Actualizar la lista de compras existente con los nuevos ingredientes
-      ingredientes.forEach(async (ingrediente) => {
-        await db.collection('listasDeCompras').updateOne(
-          { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
-          { $inc: { 'ingredientes.$.cantidad': ingrediente.faltante } },
-          { upsert: true }
-        );
-      });
+      for (const ingrediente of ingredientes) {
+        const ingredienteExistente = listaExistente.ingredientes.find(i => i.nombre === ingrediente.nombre);
+        
+        if (ingredienteExistente) {
+          // Si el ingrediente ya existe, incrementa la cantidad faltante
+          await db.collection('listasDeCompras').updateOne(
+            { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
+            { $inc: { 'ingredientes.$.cantidad': ingrediente.faltante } }
+          );
+        } else {
+          // Si el ingrediente no existe en la lista, agrégalo como nuevo
+          await db.collection('listasDeCompras').updateOne(
+            { usuarioId },
+            { $push: { ingredientes: { nombre: ingrediente.nombre, cantidad: ingrediente.faltante, comprado: false } } }
+          );
+        }
+      }
     } else {
       // Crear una nueva lista de compras con los ingredientes proporcionados
       await db.collection('listasDeCompras').insertOne({
@@ -1495,6 +1505,7 @@ app.post('/lista-de-compras/agregar', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al agregar ingredientes a la lista de compras' });
   }
 });
+
 
 
 
