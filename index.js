@@ -1422,6 +1422,51 @@ app.delete('/lista-de-compras/eliminar-toda', authenticateToken, async (req, res
   }
 });
 
+// Ruta para agregar ingredientes específicos a la lista de compras
+app.post('/lista-de-compras/agregar', authenticateToken, async (req, res) => {
+  const { ingredientes } = req.body;
+  const usuarioId = new ObjectId(req.user.id);
+
+  if (!ingredientes || ingredientes.length === 0) {
+    return res.status(400).json({ message: 'Debe proporcionar al menos un ingrediente para agregar a la lista de compras' });
+  }
+
+  try {
+    const db = await connectToDatabase();
+
+    // Verificar si el usuario ya tiene una lista de compras activa
+    const listaExistente = await db.collection('listasDeCompras').findOne({ usuarioId, completada: false });
+
+    if (listaExistente) {
+      // Actualizar la lista de compras existente con los nuevos ingredientes
+      ingredientes.forEach(async (ingrediente) => {
+        await db.collection('listasDeCompras').updateOne(
+          { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
+          { $inc: { 'ingredientes.$.cantidad': ingrediente.faltante } },
+          { upsert: true }
+        );
+      });
+    } else {
+      // Crear una nueva lista de compras con los ingredientes proporcionados
+      await db.collection('listasDeCompras').insertOne({
+        usuarioId,
+        ingredientes: ingredientes.map(ingrediente => ({
+          nombre: ingrediente.nombre,
+          cantidad: ingrediente.faltante,
+          comprado: false
+        })),
+        completada: false
+      });
+    }
+
+    res.status(200).json({ message: 'Ingredientes agregados a la lista de compras exitosamente' });
+  } catch (error) {
+    console.error('Error al agregar ingredientes a la lista de compras:', error.message);
+    res.status(500).json({ error: 'Error al agregar ingredientes a la lista de compras' });
+  }
+});
+
+
 //============================================DESPERDICIO DE ALIMENTOS=============================================
 //Funcion para revisar desperdicio de alimentos en almacen
 // const cron = require('node-cron');
