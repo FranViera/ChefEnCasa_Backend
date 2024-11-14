@@ -432,7 +432,8 @@ app.get('/api/recetas', authenticateToken, async (req, res) => {
 });
 
 
-//============================================================ Nueva ruta para recomendaciones===========================
+
+//======================================================RECOMENDACIONES======================================================
 app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
@@ -442,41 +443,56 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
     const almacen = await db.collection('almacen').findOne({ usuarioId });
 
     if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
-      console.log('No hay ingredientes en el almacén');
       return res.status(200).json({ message: 'No hay ingredientes en el almacén', recomendaciones: [] });
     }
 
     // Consultar la base de datos de recetas y filtrar según los ingredientes
     const recomendaciones = await db.collection('recetas').find().toArray();
 
+    // Filtrar recetas basadas en coincidencia de ingredientes y cantidades
     const recetasRecomendadas = recomendaciones.map((receta) => {
       const faltantes = [];
       let ingredientesCoinciden = 0;
-
-      console.log(`Procesando receta: ${receta.title}`); // Muestra el título de cada receta procesada
+      let cantidadesCoinciden = 0;
 
       receta.ingredients.forEach((ingrediente) => {
         const ingredienteAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+        
         if (ingredienteAlmacen) {
-          console.log(`Ingrediente encontrado en almacén: ${ingrediente.name}, cantidad en almacén: ${ingredienteAlmacen.cantidad}, cantidad requerida: ${ingrediente.amount}`);
+          // Coincidencia de ingrediente
           ingredientesCoinciden++;
-          if (ingredienteAlmacen.cantidad < ingrediente.amount) {
-            faltantes.push({ nombre: ingrediente.name, faltante: ingrediente.amount - ingredienteAlmacen.cantidad });
-            console.log(`Cantidad insuficiente para ${ingrediente.name}, faltan: ${ingrediente.amount - ingredienteAlmacen.cantidad}`);
+
+          // Verificar cantidad disponible
+          if (ingredienteAlmacen.cantidad >= ingrediente.amount) {
+            cantidadesCoinciden++;
+          } else {
+            // Si la cantidad en el almacén es menor, agregar a faltantes
+            faltantes.push({
+              nombre: ingrediente.name,
+              faltante: ingrediente.amount - ingredienteAlmacen.cantidad
+            });
           }
         } else {
-          faltantes.push({ nombre: ingrediente.name });
-          console.log(`Ingrediente faltante: ${ingrediente.name}`);
+          // Si el ingrediente no está en el almacén, agregar a faltantes
+          faltantes.push({ nombre: ingrediente.name, faltante: ingrediente.amount });
         }
       });
 
-      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
-      console.log(`Porcentaje de coincidencia para receta ${receta.title}: ${porcentajeCoincidencia}%`);
+      // Calcular porcentajes de coincidencia
+      const porcentajeCoincidenciaIngredientes = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      const porcentajeCoincidenciaCantidad = (cantidadesCoinciden / receta.ingredients.length) * 100;
 
-      return porcentajeCoincidencia >= 80 ? { ...receta, faltantes, porcentajeCoincidencia } : null;
+      // Considerar receta recomendada si cumple con el 80% en coincidencia de ingredientes o cantidades
+      if (porcentajeCoincidenciaIngredientes >= 80 || porcentajeCoincidenciaCantidad >= 80) {
+        return { 
+          ...receta, 
+          faltantes, 
+          porcentajeCoincidencia: Math.min(porcentajeCoincidenciaIngredientes, porcentajeCoincidenciaCantidad)
+        };
+      }
+      
+      return null;
     }).filter(Boolean);
-
-    console.log('Recetas recomendadas:', recetasRecomendadas); // Muestra las recetas que cumplen con el porcentaje de coincidencia
 
     res.json({ recomendaciones: recetasRecomendadas });
   } catch (error) {
