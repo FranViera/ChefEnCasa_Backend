@@ -2,46 +2,98 @@ const { ObjectId } = require('mongodb');
 
 // Mapa de conversiones para normalizar unidades a gramos
 const conversiones = {
-  'gram': 1,          // Base para gramos
-  'ml': 1,            // Base para mililitros
-  'kg': 1000,         // 1 kg = 1000 gramos
-  'l': 1000,          // 1 litro = 1000 ml
-  'tbsp': 15,         // 1 tablespoon = 15 gramos/mililitros
-  'tsp': 5,           // 1 teaspoon = 5 gramos/mililitros
-  'cup': 240,         // 1 cup = 240 gramos/mililitros
-  'oz': 28.35,        // 1 ounce = 28.35 gramos
-  'lb': 453.592,      // 1 pound = 453.592 gramos
-  'pinche': 0.36,      // 1 pinch (pizca) = 0.36 gramos (aproximado)
-  'clove': 5,         // 1 clove = 5 gramos
-  'head': 1000,        // 1 head = 1000 gramos
-  'ounce': 28.35,      // 1 ounce = 28.35 gramos
-  'serving': 0.5,       // 1 serving = 0.5 gramos
-  '""' : 1,          // 1 " = 0.5 gramos
-  "strip": 5,        // 1 strip = 5 gramos
-  "large": 100,       // 1 large = 100 gramos
-  "unidad": 100       // 1 unidad = 50 gramos
+  'gram': 1,          
+  'ml': 1,            
+  'kg': 1000,         
+  'l': 1000,          
+  'tbsp': 15,         
+  'tsp': 5,           
+  'cup': 240,         
+  'oz': 25,           
+  'lb': 450,          
+  'pinche': 0.36,     
+  'clove': 5,         
+  'head': 1000,       
+  'ounce': 25,        
+  'serving': 0.5,     
+  'strip': 5,         
+  'large': 100,       
+  'unidad': 100,      
+  'c': 240,           
+  't': 50,            
+  'small': 100,       
+  'tablespoon': 15,   
+  'teaspoon': 5,      
+  'can': 300,         
+  'slice': 5,         
+  'pinch': 0.5,       
+  'container': 500,   
+  'dash': 0.5,        
+  'bunch': 100,       
+  'bottle': 250,      
+  'jar': 200,         
+  'bowl': 300,        
+  'pint': 470,        
+  'quart': 946,       
+  'gallon': 3785,     
+  'Tb': 15,           
+  'handful': 50,      
+  'medium size': 100, 
+  'medium': 100,      
+  'large size': 200,  
+  'leaf': 10,
+  'large handful': 75,
+  'piece': 50,
+  'large can': 600,
+  'bag': 100,         
+  'box': 100,         
+  'stalk': 100,       
+  'stick': 50,        
+  'dash': 0.5,        
+  '8-inch': 100,      
+  'inch': 15,         
+  'small head': 100,  
+  'large head': 200,  
+  'medium head': 150, 
+  'fillet': 200,      
+  // añadir otras unidades según sea necesario
 };
 
-// Función para convertir una cantidad a gramos o mililitros
-function convertirMedida(cantidad, unidad) {
-  // Verificar si la unidad es una cadena vacía o nula
+const unidadesDesconocidas = new Set();
+
+function convertirMedida(cantidad, unidad, nombreIngrediente) {
+  // Comprobar si cantidad o unidad son undefined
+  if (cantidad === undefined || unidad === undefined) {
+    console.warn(`Datos faltantes para ${nombreIngrediente || 'ingrediente desconocido'}: cantidad=${cantidad}, unidad=${unidad}`);
+    return cantidad || 0;  // Retornar cantidad como está o 0 si es undefined
+  }
+
   if (!unidad || unidad.trim() === '') {
-    console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto.`);
-    unidad = 'gram'; // Asignar una unidad por defecto si está vacía, como 'gram'
+    console.warn(`Unidad vacía para ${nombreIngrediente || 'ingrediente desconocido'} con cantidad ${cantidad}. Asignando unidad por defecto.`);
+    unidad = ['agua', 'caldo', 'jugo'].includes((nombreIngrediente || '').toLowerCase()) ? 'ml' : 'gram';
   }
 
-  // Convertir la unidad a singular si es plural
-  if (unidad.endsWith('s')) {
-    unidad = unidad.slice(0, -1); // Quitar la 's' final para convertir a singular
-  }
+  // Normalizar la unidad a minúsculas y singular si es plural
+  unidad = unidad.toLowerCase().endsWith('s') ? unidad.slice(0, -1) : unidad.toLowerCase();
 
-  const conversionFactor = conversiones[unidad.toLowerCase()];
+  const conversionFactor = conversiones[unidad];
+
   if (!conversionFactor) {
-    throw new Error(`Unidad desconocida: ${unidad}`);
+    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente || 'ingrediente desconocido'}. Utilizando cantidad sin conversión.`);
+    unidadesDesconocidas.add(unidad);
+    return cantidad;
   }
 
   return cantidad * conversionFactor;
 }
+
+// Mostrar las unidades desconocidas al salir
+process.on('exit', () => {
+  if (unidadesDesconocidas.size > 0) {
+    console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
+  }
+});
+
 
 // Definir el esquema del almacén (usando una estructura similar a la del usuario)
 const almacenSchema = {
