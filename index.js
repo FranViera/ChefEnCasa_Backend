@@ -828,11 +828,12 @@ const conversiones = {
 
 const unidadesDesconocidas = new Set();
 
-function convertirMedida(cantidad, unidad) {
-  // Manejar unidades vacías asignando una unidad predeterminada
+function convertirMedida(cantidad, unidad, nombreIngrediente) {
+  // Manejo especial para ingredientes específicos que podrían tener unidades vacías
   if (!unidad || unidad.trim() === '') {
-    console.warn(`Unidad vacía para la cantidad ${cantidad}, asignando unidad por defecto 'gram'.`);
-    unidad = 'gram';
+    console.warn(`Unidad vacía para ${nombreIngrediente} con cantidad ${cantidad}. Asignando unidad por defecto.`);
+    // Puedes ajustar este valor por defecto según el tipo de ingrediente
+    unidad = nombreIngrediente === 'agua' || nombreIngrediente === 'caldo' ? 'ml' : 'gram';
   }
 
   // Convertir la unidad a singular si es plural
@@ -843,7 +844,7 @@ function convertirMedida(cantidad, unidad) {
   const conversionFactor = conversiones[unidad.toLowerCase()];
   
   if (!conversionFactor) {
-    console.warn(`Unidad desconocida: ${unidad}. Utilizando cantidad sin conversión.`);
+    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente}. Utilizando cantidad sin conversión.`);
     unidadesDesconocidas.add(unidad);
     return cantidad; // Devuelve la cantidad original sin conversión
   }
@@ -851,7 +852,7 @@ function convertirMedida(cantidad, unidad) {
   return cantidad * conversionFactor;
 }
 
-// Al finalizar, muestra las unidades desconocidas
+// Al finalizar, muestra las unidades desconocidas para análisis
 process.on('exit', () => {
   if (unidadesDesconocidas.size > 0) {
     console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
