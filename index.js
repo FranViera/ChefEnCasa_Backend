@@ -817,18 +817,24 @@ const conversiones = {
 const unidadesDesconocidas = new Set();
 
 function convertirMedida(cantidad, unidad, nombreIngrediente) {
-  if (!unidad || unidad.trim() === '') {
-    console.warn(`Unidad vacía para ${nombreIngrediente} con cantidad ${cantidad}. Asignando unidad por defecto.`);
-    unidad = ['agua', 'caldo', 'jugo'].includes(nombreIngrediente.toLowerCase()) ? 'ml' : 'gram';
+  // Comprobar si cantidad o unidad son undefined
+  if (cantidad === undefined || unidad === undefined) {
+    console.warn(`Datos faltantes para ${nombreIngrediente || 'ingrediente desconocido'}: cantidad=${cantidad}, unidad=${unidad}`);
+    return cantidad || 0;  // Retornar cantidad como está o 0 si es undefined
   }
 
-  // Normalizar la unidad a minúsculas y a singular si es plural
+  if (!unidad || unidad.trim() === '') {
+    console.warn(`Unidad vacía para ${nombreIngrediente || 'ingrediente desconocido'} con cantidad ${cantidad}. Asignando unidad por defecto.`);
+    unidad = ['agua', 'caldo', 'jugo'].includes((nombreIngrediente || '').toLowerCase()) ? 'ml' : 'gram';
+  }
+
+  // Normalizar la unidad a minúsculas y singular si es plural
   unidad = unidad.toLowerCase().endsWith('s') ? unidad.slice(0, -1) : unidad.toLowerCase();
 
   const conversionFactor = conversiones[unidad];
 
   if (!conversionFactor) {
-    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente}. Utilizando cantidad sin conversión.`);
+    console.warn(`Unidad desconocida: ${unidad} para ${nombreIngrediente || 'ingrediente desconocido'}. Utilizando cantidad sin conversión.`);
     unidadesDesconocidas.add(unidad);
     return cantidad;
   }
