@@ -1066,74 +1066,17 @@ function convertirMedida(cantidad, unidad) {
 
 //============================================LISTA DE COMPRAS====================================
 // Descontar ingredientes y generar lista de compras
-/*
-app.post('/preparar-receta-spoonacular', authenticateToken, async (req, res) => {
-  const { recipeId } = req.body;
-
-  try {
-    const db = await connectToDatabase();
-    const receta = await obtenerRecetaDeSpoonacular(recipeId);
-    const ingredientesReceta = receta.extendedIngredients;
-    const usuarioId = new ObjectId(req.user.id);
-    const almacen = await db.collection('almacen').findOne({ usuarioId });
-
-    if (!almacen) {
-      return res.status(404).json({ message: 'Almacén no encontrado' });
-    }
-
-    let faltanIngredientes = [];
-    
-    for (const ingredienteReceta of ingredientesReceta) {
-      const nombreTraducido = await convertirIngredienteAEspanol(ingredienteReceta.name.toLowerCase());
-      const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === nombreTraducido);
-      const cantidadEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
-
-      if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadEnGramos) {
-        faltanIngredientes.push({
-          nombre: nombreTraducido,
-          cantidad: cantidadEnGramos,
-          comprado: false  // Estado inicial de compra en falso
-        });
-      }
-    }
-
-    if (faltanIngredientes.length > 0) {
-      await db.collection('listasDeCompras').updateOne(
-        { usuarioId },
-        { $set: { ingredientes: faltanIngredientes, completada: false } },
-        { upsert: true }
-      );
-
-      return res.status(400).json({
-        message: 'No tienes suficientes ingredientes. Se ha generado una lista de compras.',
-        faltanIngredientes
-      });
-    }
-
-    res.status(200).json({ message: 'Ingredientes descontados correctamente' });
-  } catch (error) {
-    console.error('Error al preparar la receta:', error.message);
-    res.status(500).json({ error: `Error al preparar la receta: ${error.message}` });
-  }
-});
-*/
-
 app.post('/preparar-receta', authenticateToken, async (req, res) => {
   const { recipeId } = req.body;
 
   try {
     const db = await connectToDatabase();
     const receta = await db.collection('recetas').findOne({ recipeId });
-    if (!receta) {
-      return res.status(404).json({ message: 'Receta no encontrada' });
-    }
+    if (!receta) return res.status(404).json({ message: 'Receta no encontrada' });
 
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
-
-    if (!almacen) {
-      return res.status(404).json({ message: 'Almacén no encontrado' });
-    }
+    if (!almacen) return res.status(404).json({ message: 'Almacén no encontrado' });
 
     const faltanIngredientes = [];
     const ingredientesParaDescontar = [];
@@ -1141,12 +1084,10 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
     for (const ingredienteReceta of receta.ingredients) {
       try {
         const cantidadRecetaEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
-
         const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name);
         
         if (ingredienteEnAlmacen) {
           const cantidadAlmacenEnGramos = convertirMedida(ingredienteEnAlmacen.cantidad, ingredienteEnAlmacen.unit);
-
           if (cantidadAlmacenEnGramos < cantidadRecetaEnGramos) {
             faltanIngredientes.push({
               nombre: ingredienteReceta.name,
@@ -1204,11 +1145,9 @@ app.get('/lista-de-compras', authenticateToken, async (req, res) => {
     const listaDeCompras = await db.collection('listasDeCompras').findOne({ usuarioId, completada: false });
 
     if (!listaDeCompras) {
-      // Enviar una señal específica para el frontend cuando no haya lista
       return res.status(200).json({ message: 'No tienes ningún ingrediente en tu lista de compras', listaVacia: true });
     }
 
-    // Responder con la lista de compras si existe
     res.status(200).json({ ...listaDeCompras, listaVacia: false });
   } catch (error) {
     res.status(500).json({ error: `Error al obtener la lista de compras: ${error.message}` });
