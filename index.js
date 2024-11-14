@@ -453,7 +453,6 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
     const recetasRecomendadas = recomendaciones.map((receta) => {
       const faltantes = [];
       let ingredientesCoinciden = 0;
-      let cantidadesCoinciden = 0;
 
       receta.ingredients.forEach((ingrediente) => {
         // Convertir la cantidad del ingrediente de la receta a gramos
@@ -479,11 +478,8 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
             return;
           }
 
-          // Verificar cantidad disponible en el almacén
-          if (cantidadAlmacenEnGramos >= cantidadRecetaEnGramos) {
-            cantidadesCoinciden++;
-          } else {
-            // Si la cantidad en el almacén es menor, agregar a faltantes
+          // Si la cantidad en el almacén es menor, agregar a faltantes
+          if (cantidadAlmacenEnGramos < cantidadRecetaEnGramos) {
             faltantes.push({
               nombre: ingrediente.name,
               faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
@@ -495,21 +491,20 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
         }
       });
 
-      // Calcular porcentajes de coincidencia
+      // Calcular porcentaje de coincidencia en ingredientes
       const porcentajeCoincidenciaIngredientes = (ingredientesCoinciden / receta.ingredients.length) * 100;
-      const porcentajeCoincidenciaCantidad = (cantidadesCoinciden / receta.ingredients.length) * 100;
 
-      // Considerar receta recomendada si cumple con el 80% en coincidencia de ingredientes o cantidades
-      if (porcentajeCoincidenciaIngredientes >= 80 || porcentajeCoincidenciaCantidad >= 80) {
+      // Considerar receta recomendada si cumple con al menos el 70% en coincidencia de ingredientes
+      if (porcentajeCoincidenciaIngredientes >= 70) {
         return { 
           ...receta, 
           faltantes, 
-          porcentajeCoincidencia: Math.min(porcentajeCoincidenciaIngredientes, porcentajeCoincidenciaCantidad)
+          porcentajeCoincidencia: porcentajeCoincidenciaIngredientes
         };
       }
       
       return null;
-    }).filter(Boolean);
+    }).filter(Boolean); // Filtrar recetas que no cumplen con el 70%
 
     res.json({ recomendaciones: recetasRecomendadas });
   } catch (error) {
