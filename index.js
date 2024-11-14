@@ -440,7 +440,6 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
     // Obtener ingredientes del almacén del usuario
     const almacen = await db.collection('almacen').findOne({ usuarioId });
-    console.log('Almacén del usuario:', almacen); // Verifica el contenido del almacén del usuario
 
     if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
       console.log('No hay ingredientes en el almacén');
@@ -449,7 +448,6 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
     // Consultar la base de datos de recetas y filtrar según los ingredientes
     const recomendaciones = await db.collection('recetas').find().toArray();
-    console.log('Recetas encontradas en la base de datos:', recomendaciones); // Verifica la lista de recetas en la base de datos
 
     const recetasRecomendadas = recomendaciones.map((receta) => {
       const faltantes = [];
@@ -487,6 +485,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
   }
 });
 
+/*
 // Función auxiliar para obtener y traducir ingredientes de la receta desde Spoonacular
 async function obtenerIngredientesReceta(recipeId) {
   try {
@@ -517,6 +516,7 @@ async function obtenerIngredientesReceta(recipeId) {
     throw new Error('Error al obtener y traducir ingredientes de Spoonacular: ' + error.message);
   }
 }
+*/
 
 //========================================================INICIAR SERVIDOR========================================
 // Iniciar el servidor en el puerto 4000
