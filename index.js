@@ -757,73 +757,61 @@ app.post('/importar-todos-los-ingredientes', authenticateToken, async (req, res)
 
 // Mapa de conversiones para normalizar unidades a gramos
 const conversiones = {
-  'gram': 1,          // Base para gramos
-  'ml': 1,            // Base para mililitros
-  'kg': 1000,         // 1 kg = 1000 gramos
-  'l': 1000,          // 1 litro = 1000 ml
-  'tbsp': 15,         // 1 tablespoon = 15 gramos/mililitros
-  'tsp': 5,           // 1 teaspoon = 5 gramos/mililitros
-  'cup': 240,         // 1 cup = 240 gramos/mililitros
-  'oz': 25,        // 1 ounce = 25 gramos
-  'lb': 450,      // 1 pound = 450 gramos
-  'pinche': 0.36,      // 1 pinch (pizca) = 0.36 gramos (aproximado)
-  'clove': 5,         // 1 clove = 5 gramos
-  'head': 1000,        // 1 head = 1000 gramos
-  'ounce': 25,      // 1 ounce = 25 gramos
-  'serving': 0.5,       // 1 serving = 0.5 gramos
-  '""' : 1,          // 1 " = 0.5 gramos
-  "strip": 5,        // 1 strip = 5 gramos
-  "large": 100,       // 1 large = 100 gramos
-  "unidad": 100,       // 1 unidad = 50 gramos
-  "c": 240,            // 1 c = 240 gramos
-  "t": 50,             // 1 T = 50 gramos
-  "small": 100,       // 1 small = 100 gramos
-  "small pinch": 0.5,  // 1 small pinch = 0.5 gramos
-  "tablespoon": 15,   // 1 tablespoon = 15 gramos
-  "teaspoon": 5,      // 1 teaspoon = 5 gramos
-  "can": 300,         // 1 can = 300 gramos
-  "slice": 5,         // 1 slice = 5 gramos
-  "pinch": 0.5,       // 1 pinch = 0.5 gramos
-  "container": 500,   // 1 container = 500 gramos
-  "dash": 0.5,        // 1 dash = 0.5 gramos
-  "bunch": 100,       // 1 bunch = 100 gramos
-  "bottle": 250,      // 1 bottle = 250 gramos
-  "jar": 200,         // 1 jar = 200 gramos
-  "bowl": 300,        // 1 bowl = 300 gramos
-  "pint": 470,        // 1 pint = 473 ml
-  "quart": 946,       // 1 quart = 946 ml
-  "gallon": 3785,     // 1 gallon = 3785 ml
-  'Tb': 15,           // 1 Tb = 15 gramos
-  "handful": 50,      // 1 handful = 50 gramos
-  "bunch": 100,       // 1 bunch = 100 gramos
-  "pound": 450,   // 1 pound = 450 gramos
-  "sprig": 5,         // 1 sprig = 5 gramos
-  "g": 1,             // 1 g = 1 gramo
-  "small bunch": 50,  // 1 small bunch = 50 gramos
-  "bunches": 100,     // 1 bunch = 100 gramos
-  "small sprig": 2.5, // 1 small sprig = 2.5 gramos
-  "pinches": 0.5,     // 1 pinch = 0.5 gramos
-  "dashes": 0.5,      // 1 dash = 0.5 gramos
-  "medium size": 100, // 1 medium size = 100 gramos
-  "medium": 100,      // 1 medium = 100 gramos
-  "large size": 200,  // 1 large size = 200 gramos
-  "leaf": 10,
-  "large handful": 75,
-  "piece": 50,
-  "large can": 600,
-  "can": 400,
-  "bag": 100, // 1 bag = 100 gramos
-  "box": 100, // 1 box = 100 gramos
-  "stalk": 100, // 1 stalk = 100 gramos
-  "stick": 50, // 1 stick = 100 gramos
-  "dashe": 0.5, // 1 dash = 0.5 gramos
-  "dash": 0.5, // 1 dash = 0.5 gramos
-  "8-inch": 100, // 1 8-inch = 100 gramos
-  "inch": 15, // 1 inch = 15 gramos
-  "small head": 100, // 1 small head = 100 gramos
-  "large head": 200, // 1 large head = 200 gramos
-  "medium head": 150, // 1 medium head = 150 gramos
-  "fillet": 200, // 1 fillet = 200 gramos
+  'gram': 1,          
+  'ml': 1,            
+  'kg': 1000,         
+  'l': 1000,          
+  'tbsp': 15,         
+  'tsp': 5,           
+  'cup': 240,         
+  'oz': 25,           
+  'lb': 450,          
+  'pinche': 0.36,     
+  'clove': 5,         
+  'head': 1000,       
+  'ounce': 25,        
+  'serving': 0.5,     
+  'strip': 5,         
+  'large': 100,       
+  'unidad': 100,      
+  'c': 240,           
+  't': 50,            
+  'small': 100,       
+  'tablespoon': 15,   
+  'teaspoon': 5,      
+  'can': 300,         
+  'slice': 5,         
+  'pinch': 0.5,       
+  'container': 500,   
+  'dash': 0.5,        
+  'bunch': 100,       
+  'bottle': 250,      
+  'jar': 200,         
+  'bowl': 300,        
+  'pint': 470,        
+  'quart': 946,       
+  'gallon': 3785,     
+  'Tb': 15,           
+  'handful': 50,      
+  'medium size': 100, 
+  'medium': 100,      
+  'large size': 200,  
+  'leaf': 10,
+  'large handful': 75,
+  'piece': 50,
+  'large can': 600,
+  'bag': 100,         
+  'box': 100,         
+  'stalk': 100,       
+  'stick': 50,        
+  'dash': 0.5,        
+  '8-inch': 100,      
+  'inch': 15,         
+  'small head': 100,  
+  'large head': 200,  
+  'medium head': 150, 
+  'fillet': 200,      
+  // añadir otras unidades según sea necesario
 };
 
 const unidadesDesconocidas = new Set();
@@ -834,7 +822,7 @@ function convertirMedida(cantidad, unidad, nombreIngrediente) {
     unidad = ['agua', 'caldo', 'jugo'].includes(nombreIngrediente.toLowerCase()) ? 'ml' : 'gram';
   }
 
-  // Normalizar unidad a minúsculas y singular
+  // Normalizar la unidad a minúsculas y a singular si es plural
   unidad = unidad.toLowerCase().endsWith('s') ? unidad.slice(0, -1) : unidad.toLowerCase();
 
   const conversionFactor = conversiones[unidad];
@@ -848,7 +836,7 @@ function convertirMedida(cantidad, unidad, nombreIngrediente) {
   return cantidad * conversionFactor;
 }
 
-// Al salir, muestra las unidades desconocidas encontradas
+// Mostrar las unidades desconocidas al salir
 process.on('exit', () => {
   if (unidadesDesconocidas.size > 0) {
     console.log("Unidades desconocidas encontradas:", Array.from(unidadesDesconocidas));
