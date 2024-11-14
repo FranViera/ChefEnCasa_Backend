@@ -1132,16 +1132,29 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
     const ingredientesParaDescontar = [];
 
     for (const ingredienteReceta of receta.ingredients) {
+      const unidadReceta = ingredienteReceta.unit || 'gram';
+      const cantidadRecetaEnGramos = ingredienteReceta.amount * (conversiones[unidadReceta] || 1);
+
       const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name);
-      if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < ingredienteReceta.amount) {
+
+      if (ingredienteEnAlmacen) {
+        const cantidadAlmacenEnGramos = ingredienteEnAlmacen.cantidad * (conversiones[ingredienteEnAlmacen.unit] || 1);
+
+        if (cantidadAlmacenEnGramos < cantidadRecetaEnGramos) {
+          faltanIngredientes.push({
+            nombre: ingredienteReceta.name,
+            faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
+          });
+        } else {
+          ingredientesParaDescontar.push({
+            nombre: ingredienteReceta.name,
+            cantidad: cantidadRecetaEnGramos / (conversiones[ingredienteEnAlmacen.unit] || 1),
+          });
+        }
+      } else {
         faltanIngredientes.push({
           nombre: ingredienteReceta.name,
-          cantidad: ingredienteReceta.amount,
-        });
-      } else {
-        ingredientesParaDescontar.push({
-          nombre: ingredienteReceta.name,
-          cantidad: ingredienteReceta.amount,
+          faltante: cantidadRecetaEnGramos,
         });
       }
     }
