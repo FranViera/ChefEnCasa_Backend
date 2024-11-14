@@ -508,12 +508,17 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
           ...receta, 
           faltantes,
           porcentajeCoincidencia
-          //porcentajeCoincidencia: porcentajeCoincidencia.toFixed(2) // Redondear a dos decimales
         };
       }
       
       return null;
     }).filter(Boolean); // Filtrar recetas que no cumplen con el 70%
+
+    // Agrega el console.log para verificar los ingredientes faltantes
+    console.log("Ingredientes faltantes para cada receta recomendada:", recetasRecomendadas.map(r => ({ 
+      titulo: r.title, 
+      faltantes: r.faltantes 
+    })));
 
     res.json({ recomendaciones: recetasRecomendadas });
   } catch (error) {
