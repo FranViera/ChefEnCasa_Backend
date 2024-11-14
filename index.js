@@ -456,7 +456,6 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
       let cantidadesSuficientes = 0;
 
       receta.ingredients.forEach((ingrediente) => {
-        // Convertir la cantidad del ingrediente de la receta a gramos
         const cantidadRecetaEnGramos = convertirMedida(ingrediente.amount, ingrediente.unit);
 
         if (!cantidadRecetaEnGramos || isNaN(cantidadRecetaEnGramos)) {
@@ -468,7 +467,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
         const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
 
         if (ingredienteEnAlmacen) {
-          // Coincidencia de ingrediente
+          // Si el ingrediente está en el almacén, incrementar las coincidencias
           ingredientesCoinciden++;
 
           // Convertir la cantidad del ingrediente en el almacén a gramos
@@ -490,7 +489,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
             });
           }
         } else {
-          // Si el ingrediente no está en el almacén, agregar a faltantes
+          // Si el ingrediente no está en el almacén, agregarlo directamente a faltantes
           faltantes.push({ nombre: ingrediente.name, faltante: cantidadRecetaEnGramos });
         }
       });
@@ -514,7 +513,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
       return null;
     }).filter(Boolean); // Filtrar recetas que no cumplen con el 70%
 
-    // Agrega el console.log para verificar los ingredientes faltantes
+    // Debug para verificar ingredientes faltantes
     console.log("Ingredientes faltantes para cada receta recomendada:", recetasRecomendadas.map(r => ({ 
       titulo: r.title, 
       faltantes: r.faltantes 
@@ -526,6 +525,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al obtener recomendaciones' });
   }
 });
+
 
 /*
 // Función de conversión de cantidades a gramos (asegúrate de tener el mapa de conversiones configurado correctamente)
