@@ -750,6 +750,7 @@ const conversiones = {
   "pint": 473,        // 1 pint = 473 ml
   "quart": 946,       // 1 quart = 946 ml
   "gallon": 3785,     // 1 gallon = 3785 ml
+  "medium": 100,      // 1 medium = 100 gramos
 };
 
 // Función para convertir una cantidad a gramos o mililitros
