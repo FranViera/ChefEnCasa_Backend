@@ -1228,7 +1228,7 @@ app.post('/preparar-receta', authenticateToken, async (req, res) => {
     res.status(500).json({ error: `Error al preparar la receta: ${error.message}` });
   }
 });
-
+/*
 // Función para convertir la cantidad y unidad a gramos o mililitros
 function convertirMedida(cantidad, unidad) {
   if (!unidad || unidad.trim() === '') {
@@ -1248,6 +1248,7 @@ function convertirMedida(cantidad, unidad) {
 
   return cantidad * conversionFactor;
 }
+*/
 
 // VER LISTA DE COMPRAS
 app.get('/lista-de-compras', authenticateToken, async (req, res) => {
