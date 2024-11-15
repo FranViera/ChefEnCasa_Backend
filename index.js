@@ -876,19 +876,20 @@ app.get('/almacen', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const almacen = await db.collection('almacen').findOne({ usuarioId: new ObjectId(req.user.id) });
 
-    if (!almacen) {
-      return res.status(404).json({ message: 'Almacén no encontrado' });
+    // Si el almacén no existe o no contiene ingredientes
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', ingredientes: [] });
     }
 
     // Actualizar los ingredientes para incluir el nombre en español
     const ingredientesActualizados = await Promise.all(
       almacen.ingredientes.map(async (ingrediente) => {
         const ingredienteDb = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.nombre });
-    
+
         return {
           ...ingrediente,
           nombreEspanol: ingredienteDb ? ingredienteDb.nombreEspanol : ingrediente.nombre, // Usar el nombre en español si está disponible
-          img: ingrediente.img || ingredienteDb?.image || '' // Asegúrate de usar 'image' o el campo correcto en la base de datos
+          img: ingrediente.img || ingredienteDb?.image || '' // Usar imagen si está disponible en la base de datos
         };
       })
     );
