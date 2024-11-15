@@ -1630,6 +1630,19 @@ app.post('/notificaciones/generar', authenticateToken, async (req, res) => {
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
     
+    // Verificar si el almacén no existe o está vacío
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      await db.collection('notificaciones').insertOne({
+        usuarioId,
+        ingredientes: [],
+        fecha: new Date(),
+        leido: false,
+        mensaje: 'No tiene ingredientes ingresados en su almacén',
+      });
+      return res.status(200).json({ message: 'Notificación generada: No tiene ingredientes en el almacén' });
+    }
+
+    // Filtrar ingredientes agotados
     const ingredientesAgotados = almacen.ingredientes
       .filter(ingrediente => ingrediente.cantidad === 0)
       .map(ingrediente => ingrediente.nombre);  // Solo nombres
