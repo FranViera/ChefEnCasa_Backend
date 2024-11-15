@@ -1800,27 +1800,32 @@ app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
 
 //==============================GUARDAR/ELIMINAR RECETA=======================================
 //============================================================================================
+// Guardar receta en favoritos
 app.post('/recetas/guardar', authenticateToken, async (req, res) => {
   const { recipeId } = req.body;
 
   try {
     const db = await connectToDatabase();
 
+    // Verificar si la receta ya está guardada en favoritos
     const recetaExistente = await db.collection('recetasGuardadas').findOne({
       usuarioId: new ObjectId(req.user.id),
       'receta.recipeId': Number(recipeId)
     });
 
     if (recetaExistente) {
-      return res.status(409).json({ message: 'Esta receta ya fue guardada en favoritos' });
+      // En lugar de lanzar un error 409, responde con un mensaje informativo
+      return res.status(200).json({ message: 'Esta receta ya fue guardada en favoritos' });
     }
 
+    // Buscar la receta en la base de datos de recetas
     const receta = await db.collection('recetas').findOne({ recipeId });
 
     if (!receta) {
       return res.status(404).json({ message: 'Receta no encontrada en la base de datos' });
     }
 
+    // Guardar la receta en favoritos
     await db.collection('recetasGuardadas').insertOne({
       usuarioId: new ObjectId(req.user.id),
       receta,
@@ -1832,6 +1837,7 @@ app.post('/recetas/guardar', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al guardar la receta' });
   }
 });
+
 
 
 //VER RECETAS GUARDADAS 
