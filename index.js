@@ -1850,7 +1850,8 @@ app.get('/recetas/guardadas', authenticateToken, async (req, res) => {
       .toArray();
 
     if (!recetasGuardadas || recetasGuardadas.length === 0) {
-      return res.status(404).json({ message: 'No tienes recetas guardadas' });
+      // Responder con un mensaje informativo en lugar de un error
+      return res.status(200).json({ recetas: [], message: 'No tienes recetas guardadas' });
     }
 
     // Mostrar en consola las recetas obtenidas para verificar
