@@ -1814,8 +1814,11 @@ app.post('/recetas/guardar', authenticateToken, async (req, res) => {
     });
 
     if (recetaExistente) {
-      // En lugar de lanzar un error 409, responde con un mensaje informativo
-      return res.status(200).json({ message: 'Esta receta ya fue guardada en favoritos' });
+      // Responde con estado 200 e indica que ya estaba guardada
+      return res.status(200).json({
+        message: 'Esta receta ya fue guardada en favoritos anteriormente',
+        alreadySaved: true
+      });
     }
 
     // Buscar la receta en la base de datos de recetas
@@ -1831,12 +1834,17 @@ app.post('/recetas/guardar', authenticateToken, async (req, res) => {
       receta,
     });
 
-    res.status(200).json({ message: 'Receta guardada exitosamente', receta });
+    res.status(200).json({
+      message: 'Receta guardada exitosamente',
+      alreadySaved: false,
+      receta
+    });
   } catch (error) {
     console.error('Error al guardar la receta:', error.message);
     res.status(500).json({ message: 'Error al guardar la receta' });
   }
 });
+
 
 
 
