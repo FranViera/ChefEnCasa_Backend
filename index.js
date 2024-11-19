@@ -687,9 +687,9 @@ app.get('/api/recetas-dessert', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
 
-    // Filtro para recetas con el tipo "dessert"
+    // Filtro para recetas con el tipo "snack"
     const filter = {
-      type: /dessert/i, // El campo "type" debe contener "dessert" (sin importar si tiene otros valores)
+      type: /snack/i, // El campo "type" debe contener "dessert" (sin importar si tiene otros valores)
     };
 
     // Consulta a la base de datos para obtener las recetas filtradas
