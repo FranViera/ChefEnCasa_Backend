@@ -638,7 +638,9 @@ app.get('/api/recomendaciones/tipo', authenticateToken, async (req, res) => {
     const { type, porcentajeCoincidencia = 20 } = req.query;
 
     // Consultar la base de datos de recetas y filtrar según el tipo si se especifica
-    const query = type ? { type } : {};
+    const query = type
+    ? { type: { $in: type.split(',').map(t => t.trim().toLowerCase()) } } // Admite múltiples tipos
+    : {};
     const recomendaciones = await db.collection('recetas').find(query).toArray();
 
     // Filtrar recetas basadas en coincidencia de ingredientes y cantidades
