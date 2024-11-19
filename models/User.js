@@ -12,6 +12,10 @@ const UserSchema = {
     height: Number,  // Altura en cm
     imc: Number,     // IMC calculado
     dietRecommendation: String, // Recomendación de dieta
+  },
+  policiesAccepted: { 
+    type: Boolean, 
+    default: false // Valor predeterminado: no aceptadas
   }
 };
 
