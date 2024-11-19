@@ -621,8 +621,9 @@ async function obtenerIngredientesReceta(recipeId) {
 }
 */
 
-//=====================================================RECOMENDACIONES Y TIPO DE RECETA==================================
-app.get('/api/recomendaciones/tipo', authenticateToken, async (req, res) => {
+//=====================================================RECOMENDACIONES DESAYUNO==================================
+//======================================================RECETAS BREAKFAST FILTRADAS==============================
+app.get('/api/recetas-breakfast', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
@@ -631,21 +632,14 @@ app.get('/api/recomendaciones/tipo', authenticateToken, async (req, res) => {
     const almacen = await db.collection('almacen').findOne({ usuarioId });
 
     if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
-      return res.status(200).json({ message: 'No hay ingredientes en el almacén', recomendaciones: [] });
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', recetas: [] });
     }
 
-    // Obtener parámetros de tipo y porcentaje desde la solicitud
-    const { type, porcentajeCoincidencia = 20 } = req.query;
-
-    // Ajustar la consulta para buscar coincidencias en el campo `type`
-    const query = type
-      ? { type: { $regex: new RegExp(`\\b${type}\\b`, 'i') } }
-      : {};
-
-    const recomendaciones = await db.collection('recetas').find(query).toArray();
+    // Consultar las recetas con el tipo "breakfast" desde la base de datos
+    const recetas = await db.collection('recetas').find({ type: /breakfast/i }).toArray();
 
     // Filtrar recetas basadas en coincidencia de ingredientes y cantidades
-    const recetasRecomendadas = recomendaciones.map((receta) => {
+    const recetasFiltradas = recetas.map((receta) => {
       const faltantes = [];
       let ingredientesCoinciden = 0;
       let cantidadesSuficientes = 0;
@@ -662,40 +656,56 @@ app.get('/api/recomendaciones/tipo', authenticateToken, async (req, res) => {
         const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
 
         if (ingredienteEnAlmacen) {
+          // Si el ingrediente está en el almacén, incrementar las coincidencias
           ingredientesCoinciden++;
+
+          // Convertir la cantidad del ingrediente en el almacén a gramos
           const cantidadAlmacenEnGramos = convertirMedida(ingredienteEnAlmacen.cantidad, ingredienteEnAlmacen.unit);
 
+          if (!cantidadAlmacenEnGramos || isNaN(cantidadAlmacenEnGramos)) {
+            console.error(`Error al convertir la cantidad de ${ingredienteEnAlmacen.nombre}`);
+            return;
+          }
+
+          // Verificar si la cantidad en el almacén es suficiente
           if (cantidadAlmacenEnGramos >= cantidadRecetaEnGramos) {
             cantidadesSuficientes++;
           } else {
+            // Si la cantidad en el almacén es menor, agregar a faltantes
             faltantes.push({
               nombre: ingrediente.name,
               faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
             });
           }
         } else {
+          // Si el ingrediente no está en el almacén, agregarlo directamente a faltantes
           faltantes.push({ nombre: ingrediente.name, faltante: cantidadRecetaEnGramos });
         }
       });
 
+      // Calcular porcentajes de coincidencia
       const porcentajeCoincidenciaIngredientes = (ingredientesCoinciden / receta.ingredients.length) * 100;
       const porcentajeCoincidenciaCantidad = (cantidadesSuficientes / receta.ingredients.length) * 100;
-      const porcentajeCoincidenciaTotal = (porcentajeCoincidenciaIngredientes + porcentajeCoincidenciaCantidad) / 2;
 
-      if (porcentajeCoincidenciaTotal >= porcentajeCoincidencia) {
-        return {
-          ...receta,
+      // Calcular el porcentaje de coincidencia combinado
+      const porcentajeCoincidencia = (porcentajeCoincidenciaIngredientes + porcentajeCoincidenciaCantidad) / 2;
+
+      // Considerar receta si cumple con al menos el 40% en el porcentaje combinado
+      if (porcentajeCoincidencia >= 40) {
+        return { 
+          ...receta, 
           faltantes,
-          porcentajeCoincidencia: porcentajeCoincidenciaTotal,
+          porcentajeCoincidencia
         };
       }
+      
       return null;
-    }).filter(Boolean);
+    }).filter(Boolean); // Filtrar recetas que no cumplen con el 40%
 
-    res.json({ recomendaciones: recetasRecomendadas });
+    res.json({ recetas: recetasFiltradas });
   } catch (error) {
-    console.error('Error al obtener recomendaciones:', error);
-    res.status(500).json({ error: 'Error al obtener recomendaciones' });
+    console.error('Error al buscar recetas filtradas:', error);
+    res.status(500).json({ error: 'Error al buscar recetas filtradas' });
   }
 });
 
