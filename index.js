@@ -286,7 +286,12 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
     }
 
     // Generar el token JWT
-    const token = jwt.sign({ id: usuario._id, email: usuario.email, role: usuario.role }, JWT_SECRET, { expiresIn: '1h' });
+    /*const token = jwt.sign({ id: usuario._id, email: usuario.email, role: usuario.role }, JWT_SECRET, { expiresIn: '1h' });*/
+    const token = jwt.sign(
+      { id: usuario._id, email: usuario.email, role: usuario.role },
+      JWT_SECRET,
+      { expiresIn: '30d' } // Token válido por 30 días
+    );
 
     // Enviar el token de respuesta
     res.status(200).json({ message: 'Login exitoso', token });
