@@ -1105,6 +1105,44 @@ app.put('/almacen/aumentar', authenticateToken, async (req, res) => {
   }
 });
 
+// Modificar la cantidad de un ingrediente en el almacén
+app.put('/almacen/modificar', authenticateToken, async (req, res) => {
+  const { nombreIngrediente, nuevaCantidad } = req.body; // El nombre del ingrediente y la nueva cantidad
+
+  if (!nombreIngrediente || nuevaCantidad === undefined || nuevaCantidad < 0) {
+    return res.status(400).json({ message: 'Debe proporcionar el nombre del ingrediente y una cantidad válida' });
+  }
+
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+
+    // Buscar el almacén del usuario
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
+    if (!almacen) {
+      return res.status(404).json({ message: 'Almacén no encontrado' });
+    }
+
+    // Verificar si el ingrediente existe en el almacén
+    const ingrediente = almacen.ingredientes.find(item => item.nombre === nombreIngrediente.toLowerCase());
+    if (!ingrediente) {
+      return res.status(404).json({ message: `Ingrediente ${nombreIngrediente} no encontrado en el almacén` });
+    }
+
+    // Actualizar la cantidad del ingrediente
+    await db.collection('almacen').updateOne(
+      { usuarioId, 'ingredientes.nombre': nombreIngrediente.toLowerCase() },
+      { $set: { 'ingredientes.$.cantidad': nuevaCantidad } }
+    );
+
+    res.status(200).json({ message: `Cantidad de ${nombreIngrediente} modificada correctamente` });
+  } catch (error) {
+    console.error('Error al modificar la cantidad del ingrediente:', error.message);
+    res.status(500).json({ error: 'Error al modificar la cantidad del ingrediente' });
+  }
+});
+
+
 // ============================================ PREPARAR RECETA ====================================
 // Descontar ingredientes del almacén al preparar receta desde Spoonacular y generar una única lista de compras
 /*
