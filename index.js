@@ -190,6 +190,26 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Ocurrió un error', error: err.message });
 });
 
+//===================================POLITICAS DE PRIVACIDAD=================================================
+// Ruta para obtener las políticas de privacidad
+app.post('/accept-policies', authenticateToken, async (req, res) => {
+  try {
+      const result = await usersCollection.updateOne(
+          { _id: new ObjectId(req.user.id) },
+          { $set: { policiesAccepted: true } }
+      );
+
+      if (result.modifiedCount === 0) {
+          return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+
+      res.status(200).json({ message: 'Políticas aceptadas correctamente' });
+  } catch (error) {
+      console.error('Error al aceptar políticas:', error.message);
+      res.status(500).json({ message: 'Error al aceptar políticas' });
+  }
+});
+
 
   // Ruta de prueba para verificar que el servidor está funcionando
   app.get('/', (req, res) => {
@@ -198,36 +218,51 @@ app.use((err, req, res, next) => {
 
   // Ruta de registro de usuarios
   app.post('/register', async (req, res) => {
-    const { nombre, email, password, diet, allergies, role} = req.body; // Obtener los datos del cuerpo de la solicitud
+    const { nombre, email, password, policiesAccepted, diet, allergies, role } = req.body; // Agregar policiesAccepted
 
-    if (!nombre || !email || !password) { // Verificar si se envían todos los campos
+    // Validar campos obligatorios
+    if (!nombre || !email || !password) {
       return res.status(400).json({ message: 'Todos los campos son obligatorios' });
     }
 
-    // Comprobar si el usuario ya existe en la base de datos
-    const usuarioExistente = await usersCollection.findOne({ email });
-    if (usuarioExistente) {
-      return res.status(400).json({ message: 'El usuario ya existe' });
+    // Validar aceptación de políticas
+    if (!policiesAccepted) {
+      return res.status(400).json({ message: 'Debe aceptar las políticas de uso para registrarse.' });
     }
 
-    // Hashear la contraseña antes de guardarla
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const nuevoUsuario = { 
-      nombre, 
-      email, 
-      password: hashedPassword, 
-      diet: diet || null,       // Si se proporciona, asignar; si no, null
-      allergies: allergies || [], // Asignar alergias si se proporcionan, o una lista vacía
-      role: role || 'user'  // Asignar rol, por defecto 'user'
-    }; // Crear el nuevo usuario con la contraseña hasheada
+    try {
+      // Comprobar si el usuario ya existe en la base de datos
+      const usuarioExistente = await usersCollection.findOne({ email });
+      if (usuarioExistente) {
+        return res.status(400).json({ message: 'El usuario ya existe' });
+      }
 
-    await usersCollection.insertOne(nuevoUsuario); // Insertar el nuevo usuario en la base de datos
+      // Hashear la contraseña antes de guardarla
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Enviar respuesta sin incluir la contraseña
-    res.status(201).json({ 
-      message: 'Usuario registrado', 
-      usuario: { nombre: nuevoUsuario.nombre, email: nuevoUsuario.email }
-    });
+      // Crear el nuevo usuario
+      const nuevoUsuario = {
+        nombre,
+        email,
+        password: hashedPassword,
+        diet: diet || null,         // Si se proporciona, asignar; si no, null
+        allergies: allergies || [], // Asignar alergias si se proporcionan, o una lista vacía
+        role: role || 'user',       // Asignar rol, por defecto 'user'
+        policiesAccepted: true      // Registrar que las políticas han sido aceptadas
+      };
+
+      // Guardar el nuevo usuario en la base de datos
+      await usersCollection.insertOne(nuevoUsuario);
+
+      // Respuesta sin incluir la contraseña
+      res.status(201).json({
+        message: 'Usuario registrado',
+        usuario: { nombre: nuevoUsuario.nombre, email: nuevoUsuario.email }
+      });
+    } catch (error) {
+      console.error('Error al registrar usuario:', error.message);
+      res.status(500).json({ message: 'Error al registrar usuario', error: error.message });
+    }
   });
 
   // Ruta de login de usuarios
