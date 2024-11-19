@@ -622,7 +622,7 @@ async function obtenerIngredientesReceta(recipeId) {
 */
 
 
-//======================================================RECETAS BREAKFAST FILTRADAS==============================
+//======================================================RECETAS DESAYUNO FILTRADAS==============================
 app.get('/api/recetas-breakfast', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
@@ -641,6 +641,67 @@ app.get('/api/recetas-breakfast', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al buscar recetas de desayuno' });
   }
 });
+
+//======================================================RECETAS CENA FILTRADAS==============================
+app.get('/api/recetas-dinner', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+
+    // Filtro para recetas con el tipo "dinner"
+    const filter = {
+      type: /dinner/i, // El campo "type" debe contener "dinner" (sin importar si tiene otros valores)
+    };
+
+    // Consulta a la base de datos para obtener las recetas filtradas
+    const recetas = await db.collection('recetas').find(filter).toArray();
+
+    res.json({ results: recetas });
+  } catch (error) {
+    console.error('Error al buscar recetas de cena:', error.message);
+    res.status(500).json({ error: 'Error al buscar recetas de cena' });
+  }
+});
+
+//======================================================RECETAS ALMUERZO FILTRADAS==============================
+app.get('/api/recetas-lunch', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+
+    // Filtro para recetas con el tipo "lunch"
+    const filter = {
+      type: /lunch/i, // El campo "type" debe contener "lunch" (sin importar si tiene otros valores)
+    };
+
+    // Consulta a la base de datos para obtener las recetas filtradas
+    const recetas = await db.collection('recetas').find(filter).toArray();
+
+    res.json({ results: recetas });
+  } catch (error) {
+    console.error('Error al buscar recetas de almuerzo:', error.message);
+    res.status(500).json({ error: 'Error al buscar recetas de almuerzo' });
+  }
+});
+
+//======================================================RECETAS POSTRES FILTRADAS==============================
+app.get('/api/recetas-dessert', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+
+    // Filtro para recetas con el tipo "dessert"
+    const filter = {
+      type: /dessert/i, // El campo "type" debe contener "dessert" (sin importar si tiene otros valores)
+    };
+
+    // Consulta a la base de datos para obtener las recetas filtradas
+    const recetas = await db.collection('recetas').find(filter).toArray();
+
+    res.json({ results: recetas });
+  } catch (error) {
+    console.error('Error al buscar recetas de postres:', error.message);
+    res.status(500).json({ error: 'Error al buscar recetas de postres' });
+  }
+});
+
 
 
 //========================================================INICIAR SERVIDOR========================================
