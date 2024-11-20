@@ -2193,31 +2193,45 @@ app.use('/api', imageProxy);
 
 //===============================================================CONSULTAS=====================================
 // Ruta para crear una nueva consulta
+const express = require('express');
+const Joi = require('joi');
+const { ObjectId } = require('mongodb');
+const { authenticateToken } = require('./middleware'); // Middleware de autenticación
+const { connectToDatabase } = require('./database'); // Función para conectar a la base de datos
+
+const app = express();
+
+app.use(express.json()); // Middleware para parsear JSON
+
+// Ruta para crear una nueva consulta
 app.post('/reclamos', authenticateToken, async (req, res) => {
-  console.log('Datos recibidos:', req.body); // Depuración
-  console.log('Usuario autenticado:', req.user); // Depuración
+  console.log('Datos recibidos:', req.body); // Log para depuración
+  console.log('Usuario autenticado:', req.user); // Log para depuración
 
   // Esquema de validación con Joi
   const schema = Joi.object({
     titulo: Joi.string().required().messages({
-      'any.required': 'El título es obligatorio',
-      'string.empty': 'El título no puede estar vacío',
+      'any.required': 'El campo "título" es obligatorio.',
+      'string.empty': 'El campo "título" no puede estar vacío.',
     }),
     destinatario: Joi.string().valid('admin', 'nutricionista').required().messages({
-      'any.required': 'El destinatario es obligatorio',
-      'any.only': 'El destinatario debe ser "admin" o "nutricionista"',
+      'any.required': 'El campo "destinatario" es obligatorio.',
+      'any.only': 'El destinatario debe ser "admin" o "nutricionista".',
     }),
     comentario: Joi.string().required().messages({
-      'any.required': 'El comentario es obligatorio',
-      'string.empty': 'El comentario no puede estar vacío',
+      'any.required': 'El campo "comentario" es obligatorio.',
+      'string.empty': 'El campo "comentario" no puede estar vacío.',
     }),
   });
 
-  // Validar los datos del cuerpo
+  // Validar los datos del cuerpo de la solicitud
   const { error } = schema.validate(req.body);
   if (error) {
-    console.error('Error de validación:', error.details[0].message); // Depuración
-    return res.status(400).json({ message: error.details[0].message });
+    console.error('Error de validación:', error.details.map((e) => e.message)); // Log para depuración
+    return res.status(400).json({
+      message: 'Error en los datos enviados.',
+      details: error.details.map((e) => e.message),
+    });
   }
 
   const { titulo, destinatario, comentario } = req.body;
@@ -2230,20 +2244,26 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
       titulo,
       destinatario,
       comentario,
-      estado: 'Pendiente',
+      estado: 'Pendiente', // Estado inicial de la consulta
       fechaCreacion: new Date(),
-      respuesta: null,
+      respuesta: null, // Inicialmente no tiene respuesta
     };
 
-    console.log('Insertando consulta:', nuevaConsulta); // Depuración
+    console.log('Insertando consulta:', nuevaConsulta); // Log para depuración
 
-    const db = await connectToDatabase();
-    await db.collection('reclamos').insertOne(nuevaConsulta);
+    const db = await connectToDatabase(); // Conexión a la base de datos
+    await db.collection('reclamos').insertOne(nuevaConsulta); // Insertar la consulta en la colección
 
-    res.status(201).json({ message: 'Consulta creada exitosamente', consulta: nuevaConsulta });
+    res.status(201).json({
+      message: 'Consulta creada exitosamente',
+      consulta: nuevaConsulta,
+    });
   } catch (error) {
-    console.error('Error al crear la consulta:', error.message); // Depuración
-    res.status(500).json({ message: 'Error al crear la consulta', error: error.message });
+    console.error('Error al crear la consulta:', error.message); // Log para depuración
+    res.status(500).json({
+      message: 'Error al crear la consulta',
+      error: error.message,
+    });
   }
 });
 
