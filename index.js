@@ -2190,3 +2190,52 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const imageProxy = require('./imageProxy'); 
 // Usa la nueva ruta
 app.use('/api', imageProxy);
+
+//===============================================================CONSULTAS=====================================
+// Ruta para crear una nueva consulta
+app.post('/reclamos', authenticateToken, async (req, res) => {
+  const { titulo, destinatario, comentario } = req.body;
+
+  // Validar campos obligatorios
+  if (!titulo || !destinatario || !comentario) {
+    return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+  }
+
+  try {
+    const nuevaConsulta = {
+      usuarioId: new ObjectId(req.user.id),
+      nombre: req.user.nombre, // Nombre del usuario autenticado
+      email: req.user.email,  // Email del usuario autenticado
+      titulo,
+      destinatario,
+      comentario,
+      estado: 'Pendiente',  // Estado inicial de la consulta
+      fechaCreacion: new Date(),
+      respuesta: null,      // Inicialmente sin respuesta
+    };
+
+    const db = await connectToDatabase();
+    await db.collection('reclamos').insertOne(nuevaConsulta);
+
+    res.status(201).json({ message: 'Consulta creada exitosamente', consulta: nuevaConsulta });
+  } catch (error) {
+    console.error('Error al crear la consulta:', error.message);
+    res.status(500).json({ message: 'Error al crear la consulta', error: error.message });
+  }
+});
+
+// Ruta para obtener las consultas del usuario autenticado
+app.get('/reclamos/mis-consultas', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const consultas = await db
+      .collection('reclamos')
+      .find({ usuarioId: new ObjectId(req.user.id) })
+      .toArray();
+
+    res.status(200).json(consultas);
+  } catch (error) {
+    console.error('Error al obtener las consultas del usuario:', error.message);
+    res.status(500).json({ message: 'Error al obtener las consultas del usuario', error: error.message });
+  }
+});
