@@ -7,16 +7,20 @@ const UserSchema = {
   nombre: String,
   email: String,
   password: String,
-  healthData: {
-    weight: Number,  // Peso en kg
-    height: Number,  // Altura en cm
-    imc: Number,     // IMC calculado
-    dietRecommendation: String, // Recomendación de dieta
+  telefono: {
+    prefijo: String, // Prefijo del país
+    numero: String, // Número de teléfono
   },
-  policiesAccepted: { 
-    type: Boolean, 
-    default: false // Valor predeterminado: no aceptadas
-  }
+  healthData: {
+    weight: Number,
+    height: Number,
+    imc: Number,
+    dietRecommendation: String,
+  },
+  policiesAccepted: {
+    type: Boolean,
+    default: false,
+  },
 };
 
 // Función para hashear la contraseña
