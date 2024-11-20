@@ -328,65 +328,73 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
 app.put('/perfil', authenticateToken, async (req, res) => {
   const { nombre, email, password, telefono, diet, allergies } = req.body;
 
+  // Verificar que haya al menos un campo para actualizar
   if (!nombre && !email && !password && !telefono && !diet && !allergies) {
-    return res.status(400).json({ message: 'Se requiere al menos un campo para actualizar' });
+    return res.status(400).json({ message: 'Debe proporcionar al menos un campo para actualizar.' });
   }
 
   const updates = {};
 
+  // Validar y actualizar el nombre
   if (nombre) updates.nombre = nombre;
 
+  // Validar y actualizar el email
   if (email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'El correo electrónico no tiene un formato válido' });
+      return res.status(400).json({ message: 'El correo electrónico tiene un formato inválido.' });
     }
 
     const existingUser = await usersCollection.findOne({ email });
     if (existingUser && existingUser._id.toString() !== req.user.id) {
-      return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
+      return res.status(400).json({ message: 'El correo electrónico ya está registrado en otra cuenta.' });
     }
 
     updates.email = email;
   }
 
+  // Validar y actualizar el teléfono
   if (telefono) {
-    const numberRegex = /^\d{9,9}$/; // Número: entre 9 digitos
-    if !numberRegex.test(telefono.numero {
-      return res.status(400).json({ message: 'El número de teléfono no es válido' });
+    const numberRegex = /^\d{9}$/; // Validar que sea un número de 9 dígitos
+    if (!numberRegex.test(telefono.numero)) {
+      return res.status(400).json({ message: 'El número de teléfono debe tener exactamente 9 dígitos.' });
     }
-    updates.telefono = { prefijo: telefono.prefijo, numero: telefono.numero };
+    updates.telefono = { prefijo: telefono.prefijo || '+0', numero: telefono.numero }; // Usar un prefijo predeterminado si no se envía
   }
 
+  // Actualizar dieta y alergias
   if (diet) updates.diet = diet;
   if (allergies) updates.allergies = allergies;
 
+  // Validar y actualizar la contraseña
   if (password) {
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,16}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        message: 'La contraseña debe tener entre 6 y 16 caracteres, una mayúscula y un número.',
+        message: 'La contraseña debe tener entre 6 y 16 caracteres, incluir al menos una mayúscula y un número.',
       });
     }
     updates.password = await bcrypt.hash(password, 10);
   }
 
   try {
+    // Actualizar los campos en la base de datos
     const result = await usersCollection.updateOne(
       { _id: new ObjectId(req.user.id) },
       { $set: updates }
     );
 
     if (result.modifiedCount === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado o sin cambios' });
+      return res.status(404).json({ message: 'No se encontraron cambios en el perfil del usuario.' });
     }
 
-    res.status(200).json({ message: 'Perfil actualizado', updates });
+    res.status(200).json({ message: 'Perfil actualizado con éxito.', updates });
   } catch (error) {
     console.error('Error al actualizar el perfil:', error.message);
-    res.status(500).json({ message: 'Error al actualizar el perfil', error: error.message });
+    res.status(500).json({ message: 'Ocurrió un error al actualizar el perfil. Inténtelo nuevamente más tarde.' });
   }
 });
+
 
 
 // Configuración para la API de Spoonacular
