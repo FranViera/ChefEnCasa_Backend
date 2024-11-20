@@ -838,6 +838,7 @@ async function obtenerRecetaDeSpoonacular(recipeId) {
   }
 }
 */
+/*
 //===================================================RECLAMOS=================================================
 // Ruta para enviar un reclamo (usuario)
 app.post('/reclamos', authenticateToken, async (req, res) => {
@@ -871,7 +872,7 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
     await client.close();
   }
 });
-
+*/
 
 
 //===================================================INGREDIENTES=============================================
