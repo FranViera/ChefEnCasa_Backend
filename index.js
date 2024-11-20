@@ -2194,7 +2194,12 @@ app.use('/api', imageProxy);
 //===============================================================CONSULTAS=====================================
 // Ruta para crear una nueva consulta
 app.post('/reclamos', authenticateToken, async (req, res) => {
+  console.log('Datos recibidos:', req.body); // Agregar log para depurar
   const { titulo, destinatario, comentario } = req.body;
+
+  if (!titulo || !destinatario || !comentario) {
+    return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+  }
 
   // Validar campos obligatorios
   if (!titulo || !destinatario || !comentario) {
