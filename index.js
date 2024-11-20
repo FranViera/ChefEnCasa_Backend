@@ -2194,14 +2194,9 @@ app.use('/api', imageProxy);
 //===============================================================CONSULTAS=====================================
 // Ruta para crear una nueva consulta
 app.post('/reclamos', authenticateToken, async (req, res) => {
-  console.log('Datos recibidos:', req.body); // Agregar log para depurar
+  console.log('Datos recibidos:', req.body); // Depuración
   const { titulo, destinatario, comentario } = req.body;
 
-  if (!titulo || !destinatario || !comentario) {
-    return res.status(400).json({ message: 'Todos los campos son obligatorios' });
-  }
-
-  // Validar campos obligatorios
   if (!titulo || !destinatario || !comentario) {
     return res.status(400).json({ message: 'Todos los campos son obligatorios' });
   }
@@ -2209,15 +2204,17 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
   try {
     const nuevaConsulta = {
       usuarioId: new ObjectId(req.user.id),
-      nombre: req.user.nombre, // Nombre del usuario autenticado
-      email: req.user.email,  // Email del usuario autenticado
+      nombre: req.user.nombre,
+      email: req.user.email,
       titulo,
       destinatario,
       comentario,
-      estado: 'Pendiente',  // Estado inicial de la consulta
+      estado: 'Pendiente',
       fechaCreacion: new Date(),
-      respuesta: null,      // Inicialmente sin respuesta
+      respuesta: null,
     };
+
+    console.log('Insertando consulta:', nuevaConsulta); // Depuración
 
     const db = await connectToDatabase();
     await db.collection('reclamos').insertOne(nuevaConsulta);
@@ -2228,6 +2225,7 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al crear la consulta', error: error.message });
   }
 });
+
 
 // Ruta para obtener las consultas del usuario autenticado
 app.get('/reclamos/mis-consultas', authenticateToken, async (req, res) => {
