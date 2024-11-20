@@ -2264,3 +2264,10 @@ app.get('/reclamos/mis-consultas', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al obtener las consultas del usuario', error: error.message });
   }
 });
+
+// Al final de index.js
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
+  });
+}
