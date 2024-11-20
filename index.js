@@ -324,27 +324,46 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
     res.send('Ruta solo para administradores');
   });
 
-// Ruta para actualizar el perfil de usuario
+//========================================ACTUALIZAR PERFIL====================================
 app.put('/perfil', authenticateToken, async (req, res) => {
-  const { nombre, email, password, telefono, diet, allergies } = req.body; // Añadimos más campos
+  const { nombre, email, password, telefono, diet, allergies } = req.body;
 
   if (!nombre && !email && !password && !telefono && !diet && !allergies) {
     return res.status(400).json({ message: 'Se requiere al menos un campo para actualizar' });
   }
 
-  const updates = {}; // Objeto para almacenar las actualizaciones
+  const updates = {};
 
   if (nombre) updates.nombre = nombre;
-  if (email) updates.email = email;
-  if (telefono && telefono.prefijo && telefono.numero) {
+
+  if (email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'El correo electrónico no tiene un formato válido' });
+    }
+
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser && existingUser._id.toString() !== req.user.id) {
+      return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
+    }
+
+    updates.email = email;
+  }
+
+  if (telefono) {
+    const phoneRegex = /^\d{1,4}$/; // Prefijo: entre 1 y 4 dígitos
+    const numberRegex = /^\d{6,15}$/; // Número: entre 6 y 15 dígitos
+    if (!phoneRegex.test(telefono.prefijo) || !numberRegex.test(telefono.numero)) {
+      return res.status(400).json({ message: 'El número de teléfono no es válido' });
+    }
     updates.telefono = { prefijo: telefono.prefijo, numero: telefono.numero };
   }
+
   if (diet) updates.diet = diet;
   if (allergies) updates.allergies = allergies;
 
-  // Hashear la contraseña si es proporcionada
   if (password) {
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/; // Validación de contraseña
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message: 'La contraseña debe tener entre 8 y 16 caracteres, una mayúscula y un número.',
@@ -369,6 +388,7 @@ app.put('/perfil', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al actualizar el perfil', error: error.message });
   }
 });
+
 
 // Configuración para la API de Spoonacular
 const SPOONACULAR_API_BASE_URL = 'https://api.spoonacular.com';
