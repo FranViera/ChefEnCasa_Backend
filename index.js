@@ -2195,16 +2195,34 @@ app.use('/api', imageProxy);
 // Ruta para crear una nueva consulta
 app.post('/reclamos', authenticateToken, async (req, res) => {
   console.log('Datos recibidos:', req.body); // Depuración
-  const { titulo, destinatario, comentario } = req.body;
+  console.log('Usuario autenticado:', req.user); // Depuración
 
-  if (!titulo || !destinatario || !comentario) {
-    return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+  // Esquema de validación con Joi
+  const schema = Joi.object({
+    titulo: Joi.string().required().messages({
+      'any.required': 'El título es obligatorio',
+      'string.empty': 'El título no puede estar vacío',
+    }),
+    destinatario: Joi.string().valid('admin', 'nutricionista').required().messages({
+      'any.required': 'El destinatario es obligatorio',
+      'any.only': 'El destinatario debe ser "admin" o "nutricionista"',
+    }),
+    comentario: Joi.string().required().messages({
+      'any.required': 'El comentario es obligatorio',
+      'string.empty': 'El comentario no puede estar vacío',
+    }),
+  });
+
+  // Validar los datos del cuerpo
+  const { error } = schema.validate(req.body);
+  if (error) {
+    console.error('Error de validación:', error.details[0].message); // Depuración
+    return res.status(400).json({ message: error.details[0].message });
   }
 
+  const { titulo, destinatario, comentario } = req.body;
+
   try {
-    console.log('Datos recibidos:', req.body);
-    console.log('Usuario autenticado:', req.user);
-    
     const nuevaConsulta = {
       usuarioId: new ObjectId(req.user.id),
       nombre: req.user.nombre,
@@ -2217,9 +2235,6 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
       respuesta: null,
     };
 
-    console.log('Insertando consulta:', nuevaConsulta);
-
-
     console.log('Insertando consulta:', nuevaConsulta); // Depuración
 
     const db = await connectToDatabase();
@@ -2227,7 +2242,7 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
 
     res.status(201).json({ message: 'Consulta creada exitosamente', consulta: nuevaConsulta });
   } catch (error) {
-    console.error('Error al crear la consulta:', error.message);
+    console.error('Error al crear la consulta:', error.message); // Depuración
     res.status(500).json({ message: 'Error al crear la consulta', error: error.message });
   }
 });
