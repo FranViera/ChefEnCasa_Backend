@@ -2265,3 +2265,18 @@ app.get('/reclamos/mis-consultas', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/reclamos/marcar-leido', authenticateToken, async (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ message: 'Se requiere el ID de la consulta' });
+
+  try {
+    const result = await db.collection('reclamos').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { leido: true } }
+    );
+    if (result.modifiedCount === 0) return res.status(404).json({ message: 'Consulta no encontrada' });
+    res.status(200).json({ message: 'Consulta marcada como leída' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al marcar la consulta como leída', error: error.message });
+  }
+});
