@@ -2202,6 +2202,9 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
   }
 
   try {
+    console.log('Datos recibidos:', req.body);
+    console.log('Usuario autenticado:', req.user);
+    
     const nuevaConsulta = {
       usuarioId: new ObjectId(req.user.id),
       nombre: req.user.nombre,
@@ -2213,6 +2216,9 @@ app.post('/reclamos', authenticateToken, async (req, res) => {
       fechaCreacion: new Date(),
       respuesta: null,
     };
+
+    console.log('Insertando consulta:', nuevaConsulta);
+
 
     console.log('Insertando consulta:', nuevaConsulta); // Depuración
 
