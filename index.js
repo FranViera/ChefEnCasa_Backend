@@ -324,31 +324,46 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
     res.send('Ruta solo para administradores');
   });
 
-// Ruta para que los usuarios actualicen su perfil
+// Ruta para actualizar el perfil de usuario
 app.put('/perfil', authenticateToken, async (req, res) => {
-  const { diet, allergies } = req.body;  // Obtener dieta y alergias desde el cuerpo de la solicitud
+  const { nombre, email, password, telefono, diet, allergies } = req.body; // Añadimos más campos
 
-  if (!diet && !allergies) {
-    return res.status(400).json({ message: 'Se requiere al menos una de las siguientes propiedades: dieta o alergias' });
+  if (!nombre && !email && !password && !telefono && !diet && !allergies) {
+    return res.status(400).json({ message: 'Se requiere al menos un campo para actualizar' });
+  }
+
+  const updates = {}; // Objeto para almacenar las actualizaciones
+
+  if (nombre) updates.nombre = nombre;
+  if (email) updates.email = email;
+  if (telefono && telefono.prefijo && telefono.numero) {
+    updates.telefono = { prefijo: telefono.prefijo, numero: telefono.numero };
+  }
+  if (diet) updates.diet = diet;
+  if (allergies) updates.allergies = allergies;
+
+  // Hashear la contraseña si es proporcionada
+  if (password) {
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/; // Validación de contraseña
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        message: 'La contraseña debe tener entre 8 y 16 caracteres, una mayúscula y un número.',
+      });
+    }
+    updates.password = await bcrypt.hash(password, 10);
   }
 
   try {
-    // Actualizar el perfil del usuario con su dieta y/o alergias
     const result = await usersCollection.updateOne(
-      { _id: new ObjectId(req.user.id) }, // Buscar usuario por su ID en el token JWT
-      { 
-        $set: { 
-          ...(diet && { diet }),  // Si existe diet, agregarla al perfil
-          ...(allergies && { allergies })  // Si existe allergies, agregarla al perfil
-        }
-      }
+      { _id: new ObjectId(req.user.id) },
+      { $set: updates }
     );
 
     if (result.modifiedCount === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado o sin cambios' });
     }
 
-    res.status(200).json({ message: 'Perfil actualizado', diet, allergies });
+    res.status(200).json({ message: 'Perfil actualizado', updates });
   } catch (error) {
     console.error('Error al actualizar el perfil:', error.message);
     res.status(500).json({ message: 'Error al actualizar el perfil', error: error.message });
