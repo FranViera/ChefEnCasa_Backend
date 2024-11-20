@@ -298,9 +298,22 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
   });
 
   // Ruta protegida para acceder al perfil de usuario solo con token válido
-  app.get('/perfil', authenticateToken, (req, res) => {
-    res.send(`Accediste al perfil con éxito, usuario: ${req.user.email}`);
-  });
+  app.get('/perfil', authenticateToken, async (req, res) => {
+  try {
+    // Buscar al usuario por su ID en la base de datos
+    const usuario = await usersCollection.findOne({ _id: new ObjectId(req.user.id) }, { projection: { password: 0 } });
+
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Responder con los datos del usuario (sin la contraseña)
+    res.status(200).json(usuario);
+  } catch (error) {
+    console.error('Error al obtener el perfil del usuario:', error.message);
+    res.status(500).json({ message: 'Error al obtener el perfil del usuario', error: error.message });
+  }
+});
 
   // Ruta solo accesible para administradores
   app.get('/admin', authenticateToken, checkRole('admin'), (req, res) => {
