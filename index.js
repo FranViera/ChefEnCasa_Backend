@@ -351,9 +351,8 @@ app.put('/perfil', authenticateToken, async (req, res) => {
   }
 
   if (telefono) {
-    const phoneRegex = /^\d{1,4}$/; // Prefijo: entre 1 y 4 dígitos
-    const numberRegex = /^\d{6,15}$/; // Número: entre 6 y 15 dígitos
-    if (!phoneRegex.test(telefono.prefijo) || !numberRegex.test(telefono.numero)) {
+    const numberRegex = /^\d{9,9}$/; // Número: entre 9 digitos
+    if !numberRegex.test(telefono.numero {
       return res.status(400).json({ message: 'El número de teléfono no es válido' });
     }
     updates.telefono = { prefijo: telefono.prefijo, numero: telefono.numero };
@@ -363,10 +362,10 @@ app.put('/perfil', authenticateToken, async (req, res) => {
   if (allergies) updates.allergies = allergies;
 
   if (password) {
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,16}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        message: 'La contraseña debe tener entre 8 y 16 caracteres, una mayúscula y un número.',
+        message: 'La contraseña debe tener entre 6 y 16 caracteres, una mayúscula y un número.',
       });
     }
     updates.password = await bcrypt.hash(password, 10);
