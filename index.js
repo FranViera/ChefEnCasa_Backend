@@ -2265,9 +2265,3 @@ app.get('/reclamos/mis-consultas', authenticateToken, async (req, res) => {
   }
 });
 
-// Al final de index.js
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
-  });
-}
