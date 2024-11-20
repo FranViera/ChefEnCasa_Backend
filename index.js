@@ -218,52 +218,56 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
 
   // Ruta de registro de usuarios
   app.post('/register', async (req, res) => {
-    const { nombre, email, password, policiesAccepted, diet, allergies, role } = req.body; // Agregar policiesAccepted
+  const { nombre, email, password, policiesAccepted, telefono, diet, allergies, role } = req.body;
 
-    // Validar campos obligatorios
-    if (!nombre || !email || !password) {
-      return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+  // Validar campos obligatorios
+  if (!nombre || !email || !password || !telefono || !telefono.prefijo || !telefono.numero) {
+    return res.status(400).json({ message: 'Todos los campos son obligatorios, incluyendo el número de teléfono y prefijo' });
+  }
+
+  // Validar aceptación de políticas
+  if (!policiesAccepted) {
+    return res.status(400).json({ message: 'Debe aceptar las políticas de uso para registrarse.' });
+  }
+
+  try {
+    // Comprobar si el usuario ya existe en la base de datos
+    const usuarioExistente = await usersCollection.findOne({ email });
+    if (usuarioExistente) {
+      return res.status(400).json({ message: 'El usuario ya existe' });
     }
 
-    // Validar aceptación de políticas
-    if (!policiesAccepted) {
-      return res.status(400).json({ message: 'Debe aceptar las políticas de uso para registrarse.' });
-    }
+    // Hashear la contraseña antes de guardarla
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    try {
-      // Comprobar si el usuario ya existe en la base de datos
-      const usuarioExistente = await usersCollection.findOne({ email });
-      if (usuarioExistente) {
-        return res.status(400).json({ message: 'El usuario ya existe' });
-      }
+    // Crear el nuevo usuario
+    const nuevoUsuario = {
+      nombre,
+      email,
+      password: hashedPassword,
+      telefono: {
+        prefijo: telefono.prefijo,
+        numero: telefono.numero,
+      },
+      diet: diet || null,
+      allergies: allergies || [],
+      role: role || 'user',
+      policiesAccepted: true,
+    };
 
-      // Hashear la contraseña antes de guardarla
-      const hashedPassword = await bcrypt.hash(password, 10);
+    // Guardar el nuevo usuario en la base de datos
+    await usersCollection.insertOne(nuevoUsuario);
 
-      // Crear el nuevo usuario
-      const nuevoUsuario = {
-        nombre,
-        email,
-        password: hashedPassword,
-        diet: diet || null,         // Si se proporciona, asignar; si no, null
-        allergies: allergies || [], // Asignar alergias si se proporcionan, o una lista vacía
-        role: role || 'user',       // Asignar rol, por defecto 'user'
-        policiesAccepted: true      // Registrar que las políticas han sido aceptadas
-      };
+    res.status(201).json({
+      message: 'Usuario registrado',
+      usuario: { nombre: nuevoUsuario.nombre, email: nuevoUsuario.email, telefono: nuevoUsuario.telefono },
+    });
+  } catch (error) {
+    console.error('Error al registrar usuario:', error.message);
+    res.status(500).json({ message: 'Error al registrar usuario', error: error.message });
+  }
+});
 
-      // Guardar el nuevo usuario en la base de datos
-      await usersCollection.insertOne(nuevoUsuario);
-
-      // Respuesta sin incluir la contraseña
-      res.status(201).json({
-        message: 'Usuario registrado',
-        usuario: { nombre: nuevoUsuario.nombre, email: nuevoUsuario.email }
-      });
-    } catch (error) {
-      console.error('Error al registrar usuario:', error.message);
-      res.status(500).json({ message: 'Error al registrar usuario', error: error.message });
-    }
-  });
 
   // Ruta de login de usuarios
   app.post('/login', async (req, res) => {
