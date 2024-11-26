@@ -16,6 +16,8 @@ const UserSchema = {
     height: Number,
     imc: Number,
     dietRecommendation: String,
+    caloricNeeds: Number, // Calorías diarias recomendadas
+    tmb: Number,          // Tasa Metabólica Basal
   },
   policiesAccepted: {
     type: Boolean,
