@@ -2216,12 +2216,15 @@ app.put('/perfil/health', authenticateToken, async (req, res) => {
       { _id: new ObjectId(req.user.id) },
       {
         $set: {
-          'healthData.weight': weight,
-          'healthData.height': height,
-          'healthData.imc': parseFloat(imc),
-          'healthData.dietRecommendation': dietRecommendation,
+          healthData: {
+            weight,
+            height,
+            imc: parseFloat(imc),
+            dietRecommendation,
+          },
         },
-      }
+      },
+      { upsert: true } // Crear healthData si no existe
     );
 
     if (result.modifiedCount === 0) {
@@ -2242,6 +2245,7 @@ app.put('/perfil/health', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al actualizar el perfil de salud.', error: error.message });
   }
 });
+
 
 
 // Ruta protegida para acceder al perfil de usuario solo con token válido
