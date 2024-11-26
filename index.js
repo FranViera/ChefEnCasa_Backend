@@ -627,6 +627,48 @@ app.get('/api/recetas', authenticateToken, async (req, res) => {
   }
 });
 
+//=============================================================BUSCAR RECETAS PREMIUM====================================================
+app.get('/api/recetasPremium', authenticateToken, async (req, res) => {
+  const query = req.query.q || ''; // Búsqueda por palabra clave
+  const time = req.query.time || null; // Tiempo máximo de preparación
+  const maxServings = req.query.maxServings || null; // Máximo de porciones
+  const diet = req.query.diet || null; // Tipo de dieta
+  const maxCalories = req.query.maxCalories || null; // Máximas calorías
+
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id); // ID del usuario autenticado
+
+    // Obtener el perfil del usuario para verificar si es premium y obtener sus intolerancias
+    const user = await db.collection('usuarios').findOne({ _id: usuarioId });
+    if (!user || !user.premium) {
+      return res.status(403).json({ error: 'Acceso denegado. Solo disponible para usuarios premium.' });
+    }
+
+    // Construir los filtros dinámicamente
+    const filter = {
+      title: { $regex: new RegExp(query, 'i') }, // Filtro por palabra clave
+      ...(time && { readyInMinutes: { $lte: Number(time) } }), // Filtro por tiempo máximo
+      ...(maxServings && { servings: { $lte: Number(maxServings) } }), // Filtro por máximo de porciones
+      ...(diet && { type: diet }), // Filtro por tipo de dieta
+      ...(maxCalories && { calories: { $lte: Number(maxCalories) } }), // Filtro por calorías
+    };
+
+    // Agregar el filtro de intolerancias del usuario
+    if (user.allergies && user.allergies.length > 0) {
+      filter.ingredients = { $not: { $elemMatch: { intolerance: { $in: user.allergies.map(a => a.english) } } } };
+    }
+
+    // Buscar en la colección recetasPremium
+    const recetas = await db.collection('recetasPremium').find(filter).limit(10).toArray();
+
+    res.json({ results: recetas });
+  } catch (error) {
+    console.error('Error al buscar recetas premium en la base de datos:', error.message);
+    res.status(500).json({ error: 'Error al buscar recetas premium' });
+  }
+});
+
 
 
 //======================================================RECOMENDACIONES======================================================
