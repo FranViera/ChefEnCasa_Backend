@@ -216,9 +216,9 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
     res.send('API de Chef en Casa funcionando');
   });
 
-  // Ruta de registro de usuarios
-  app.post('/register', async (req, res) => {
-  const { nombre, email, password, policiesAccepted, telefono, diet, allergies, role } = req.body;
+// Ruta de registro de usuarios
+app.post('/register', async (req, res) => {
+  const { nombre, email, password, policiesAccepted, telefono, diet, allergies, role, premium } = req.body;
 
   // Validar campos obligatorios
   if (!nombre || !email || !password || !telefono || !telefono.prefijo || !telefono.numero) {
@@ -253,6 +253,7 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
       allergies: allergies || [],
       role: role || 'user',
       policiesAccepted: true,
+      premium: premium || false, // Si no se especifica, el usuario no es premium por defecto
     };
 
     // Guardar el nuevo usuario en la base de datos
@@ -260,7 +261,12 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
 
     res.status(201).json({
       message: 'Usuario registrado',
-      usuario: { nombre: nuevoUsuario.nombre, email: nuevoUsuario.email, telefono: nuevoUsuario.telefono },
+      usuario: {
+        nombre: nuevoUsuario.nombre,
+        email: nuevoUsuario.email,
+        telefono: nuevoUsuario.telefono,
+        premium: nuevoUsuario.premium, // Devolver el estado premium en la respuesta
+      },
     });
   } catch (error) {
     console.error('Error al registrar usuario:', error.message);
