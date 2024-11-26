@@ -2037,22 +2037,16 @@ app.get('/recetas/mejor-valoradas', authenticateToken, async (req, res) => {
 // Ruta para obtener las recetas valoradas recientemente
 app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
   try {
+    const userId = new ObjectId(req.user.id); // Asegúrate de convertir a ObjectId si es necesario
+
     // Obtener las recetas valoradas por el usuario
     const recetas = await recetasCollection
-      .find({ valoraciones: { $elemMatch: { userId: req.user.id } } }) // Filtra las recetas valoradas por el usuario
+      .find({ "valoraciones.userId": userId }) // Ajusta la consulta si es necesario
       .project({ nombre: 1, imageUrl: 1, valoracion: 1, porciones: 1, tiempo: 1 }) // Selecciona solo los campos necesarios
       .toArray();
 
-    // Si no hay recetas valoradas, devolver un arreglo vacío
-    if (!recetas || recetas.length === 0) {
-      return res.status(200).json({
-        message: 'No hay recetas valoradas recientemente.',
-        recetas: [], // Devolver un arreglo vacío
-      });
-    }
-
     res.status(200).json({
-      message: 'Recetas valoradas obtenidas exitosamente.',
+      message: recetas.length > 0 ? 'Recetas valoradas obtenidas exitosamente.' : 'No hay recetas valoradas recientemente.',
       recetas,
     });
   } catch (error) {
@@ -2060,6 +2054,7 @@ app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al obtener las recetas valoradas.', error: error.message });
   }
 });
+
 
 
 //==============================GUARDAR/ELIMINAR RECETA=======================================
