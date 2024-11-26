@@ -2541,3 +2541,51 @@ app.post('/simular-pago', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al simular pago.', error: error.message });
   }
 });
+
+//================================ALERGIAS===================
+//Obtener alergias
+app.get('/perfil/allergies', authenticateToken, async (req, res) => {
+  try {
+    const usuario = await usersCollection.findOne(
+      { _id: new ObjectId(req.user.id) },
+      { projection: { allergies: 1 } }
+    );
+
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json({
+      message: 'Alergias obtenidas exitosamente.',
+      allergies: usuario.allergies || []
+    });
+  } catch (error) {
+    console.error('Error al obtener alergias:', error.message);
+    res.status(500).json({ message: 'Error al obtener alergias.', error: error.message });
+  }
+});
+
+//Guardar alergias
+app.post('/perfil/allergies', authenticateToken, async (req, res) => {
+  const { allergies } = req.body;
+
+  if (!Array.isArray(allergies)) {
+    return res.status(400).json({ message: 'Las alergias deben ser un arreglo.' });
+  }
+
+  try {
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(req.user.id) },
+      { $set: { allergies } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json({ message: 'Alergias actualizadas exitosamente.' });
+  } catch (error) {
+    console.error('Error al guardar alergias:', error.message);
+    res.status(500).json({ message: 'Error al guardar alergias.', error: error.message });
+  }
+});
