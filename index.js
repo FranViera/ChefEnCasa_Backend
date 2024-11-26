@@ -2037,23 +2037,33 @@ app.get('/recetas/mejor-valoradas', authenticateToken, async (req, res) => {
 // Ruta para obtener las recetas valoradas recientemente
 app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
   try {
-    const userId = new ObjectId(req.user.id); // Asegúrate de convertir a ObjectId si es necesario
+    const userId = new ObjectId(req.user.id); // Asegúrate de convertir el ID
 
-    // Obtener las recetas valoradas por el usuario
+    // Consulta las recetas valoradas por el usuario
     const recetas = await recetasCollection
-      .find({ "valoraciones.userId": userId }) // Ajusta la consulta si es necesario
+      .find({ "valoraciones.userId": userId }) // Filtra valoraciones por usuario
       .project({ nombre: 1, imageUrl: 1, valoracion: 1, porciones: 1, tiempo: 1 }) // Selecciona solo los campos necesarios
       .toArray();
 
+    // Si no hay recetas valoradas
+    if (!recetas || recetas.length === 0) {
+      return res.status(200).json({
+        message: 'No hay recetas valoradas recientemente.',
+        recetas: [], // Devuelve un arreglo vacío
+      });
+    }
+
+    // Devuelve las recetas encontradas
     res.status(200).json({
-      message: recetas.length > 0 ? 'Recetas valoradas obtenidas exitosamente.' : 'No hay recetas valoradas recientemente.',
+      message: 'Recetas valoradas obtenidas exitosamente.',
       recetas,
     });
   } catch (error) {
-    console.error('Error al obtener las recetas valoradas recientemente:', error.message);
-    res.status(500).json({ message: 'Error al obtener las recetas valoradas.', error: error.message });
+    console.error('Error al obtener recetas valoradas:', error);
+    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
   }
 });
+
 
 
 
