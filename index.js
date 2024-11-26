@@ -2178,6 +2178,30 @@ app.get('/receta/compartir/:id', authenticateToken, async (req, res) => {
 });
 
 //========================================SALUD=============================================
+// Ruta para obtener el perfil de salud del usuario
+app.get('/perfil/health', authenticateToken, async (req, res) => {
+  try {
+    // Obtener el usuario actual
+    const usuario = await usersCollection.findOne(
+      { _id: new ObjectId(req.user.id) },
+      { projection: { healthData: 1 } } // Solo devolver el campo healthData
+    );
+
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json({
+      message: 'Perfil de salud obtenido exitosamente.',
+      healthData: usuario.healthData || null, // Si healthData no existe, devolver null
+    });
+  } catch (error) {
+    console.error('Error al obtener el perfil de salud:', error.message);
+    res.status(500).json({ message: 'Error al obtener el perfil de salud.', error: error.message });
+  }
+});
+
+
 // Ruta para actualizar el perfil de salud del usuario (solo para usuarios premium)
 app.put('/perfil/health', authenticateToken, async (req, res) => {
   const { weight, height } = req.body;
