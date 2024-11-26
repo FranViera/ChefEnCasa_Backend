@@ -2034,25 +2034,37 @@ app.get('/recetas/mejor-valoradas', authenticateToken, async (req, res) => {
 
 //==================================OBTENER RECETAS VALORADAS RECIENTEMENTE==================================
 //===============================================================================================
-app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
+// Ruta para obtener el perfil de salud del usuario
+app.get('/perfil/health', authenticateToken, async (req, res) => {
   try {
-    const db = await connectToDatabase();
-    const usuarioId = new ObjectId(req.user.id);
+    const usuario = await usersCollection.findOne(
+      { _id: new ObjectId(req.user.id) },
+      { projection: { healthData: 1 } } // Solo devolver el healthData
+    );
 
-    // Obtener las recetas valoradas recientemente por el usuario, ordenadas por fecha de valoración
-    const recetasValoradas = await db.collection('recetasValoradas')
-      .find({ usuarioId })
-      .sort({ fechaValoracion: -1 }) // Ordenar por fecha descendente
-      .limit(5) // Limitar a las 5 recetas más recientes
-      .toArray();
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
 
-    res.status(200).json(recetasValoradas);
+    // Si no hay datos de salud, devolver un objeto vacío en lugar de null
+    const healthData = usuario.healthData || {
+      weight: null,
+      height: null,
+      imc: null,
+      dietRecommendation: null,
+      caloricNeeds: null,
+      tmb: null,
+    };
+
+    res.status(200).json({
+      message: 'Datos de salud obtenidos exitosamente.',
+      healthData,
+    });
   } catch (error) {
-    console.error('Error al obtener recetas valoradas recientemente:', error.message);
-    res.status(500).json({ message: 'Error al obtener recetas valoradas' });
+    console.error('Error al obtener el perfil de salud:', error.message);
+    res.status(500).json({ message: 'Error al obtener el perfil de salud.', error: error.message });
   }
 });
-
 //==============================GUARDAR/ELIMINAR RECETA=======================================
 //============================================================================================
 // Guardar receta en favoritos
