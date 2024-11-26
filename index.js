@@ -988,26 +988,13 @@ app.get('/recetaPremium/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Receta premium no encontrada en la base de datos' });
     }
 
-    // Convertir las cantidades de los ingredientes
-    const ingredientesConvertidos = receta.ingredients.map((ingrediente) => {
-      const cantidadConvertida = convertirMedida(ingrediente.amount, ingrediente.unit, ingrediente.name);
-      return {
-        ...ingrediente,
-        amount: cantidadConvertida,
-        unit: 'gram' // Convertir las unidades a gramos o a la unidad estándar deseada
-      };
-    });
-
-    res.json({
-      ...receta,
-      ingredients: ingredientesConvertidos,
-      nutrition: receta.nutrition, // Incluir la información nutricional
-    });
+    res.json(receta);
   } catch (error) {
     console.error('Error al obtener detalles de la receta premium:', error.message);
     res.status(500).json({ message: 'Error al obtener detalles de la receta premium' });
   }
 });
+
 
 
 /*
