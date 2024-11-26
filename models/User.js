@@ -21,6 +21,10 @@ const UserSchema = {
     type: Boolean,
     default: false,
   },
+  premium: {
+    type: Boolean,
+    default: false, // Los usuarios no serán premium por defecto
+  },
 };
 
 // Función para hashear la contraseña
