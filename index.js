@@ -2175,72 +2175,71 @@ app.get('/receta/compartir/:id', authenticateToken, async (req, res) => {
 });
 
 //========================================SALUD=============================================
-// Salud
-// Ruta para actualizar los datos de salud del usuario
-// app.put('/perfil/health', authenticateToken, async (req, res) => {
-//   const { weight, height, imc, dietRecommendation } = req.body;
-
-//   if (!weight || !height || !imc || !dietRecommendation) {
-//     return res.status(400).json({ message: 'Todos los campos son obligatorios' });
-//   }
-
-//   try {
-//     // Update the user's health data in MongoDB
-//     const result = await usersCollection.updateOne(
-//       { _id: new ObjectId(req.user.id) },  // Use the ID from the authenticated user
-//       { 
-//         $set: { 
-//           weight: weight, 
-//           height: height, 
-//           imc: imc, 
-//           dietRecommendation: dietRecommendation 
-//         }
-//       }
-//     );
-
-//     if (result.modifiedCount === 0) {
-//       return res.status(404).json({ message: 'Usuario no encontrado o sin cambios' });
-//     }
-
-//     res.status(200).json({ message: 'Datos de salud actualizados' });
-//   } catch (error) {
-//     console.error('Error al actualizar los datos de salud:', error);
-//     res.status(500).json({ message: 'Error al actualizar los datos de salud' });
-//   }
-// });
-
-// Salud
-// Ruta para actualizar los datos de salud del usuario
+// Ruta para actualizar el perfil de salud del usuario (solo para usuarios premium)
 app.put('/perfil/health', authenticateToken, async (req, res) => {
-  const { weight, height, imc, dietRecommendation } = req.body;
+  const { weight, height } = req.body;
 
-  if (!weight || !height || !imc || !dietRecommendation) {
-    return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+  // Validar que los datos requeridos están presentes
+  if (!weight || !height) {
+    return res.status(400).json({ message: 'Debe proporcionar peso y altura para calcular el IMC.' });
   }
 
   try {
+    // Obtener el usuario actual
+    const usuario = await usersCollection.findOne({ _id: new ObjectId(req.user.id) });
+
+    // Verificar si el usuario es premium
+    if (!usuario || !usuario.premium) {
+      return res.status(403).json({ message: 'Esta funcionalidad es exclusiva para usuarios premium.' });
+    }
+
+    // Calcular el IMC
+    const imc = (weight / ((height / 100) ** 2)).toFixed(2);
+
+    // Generar la recomendación dietética basada en el IMC
+    let dietRecommendation = '';
+    if (imc < 18.5) {
+      dietRecommendation = 'Dieta alta en calorías';
+    } else if (imc >= 18.5 && imc < 24.9) {
+      dietRecommendation = 'Dieta balanceada';
+    } else if (imc >= 25 && imc < 29.9) {
+      dietRecommendation = 'Dieta baja en calorías';
+    } else {
+      dietRecommendation = 'Dieta para reducción de peso';
+    }
+
+    // Actualizar el perfil de salud del usuario en la base de datos
     const result = await usersCollection.updateOne(
-      { _id: new ObjectId(req.user.id) },  // Usar el ID del usuario autenticado
-      { 
-        $set: { 
-          'healthData.weight': weight, 
-          'healthData.height': height, 
-          'healthData.imc': imc, 
-          'healthData.dietRecommendation': dietRecommendation 
-        }
+      { _id: new ObjectId(req.user.id) },
+      {
+        $set: {
+          'healthData.weight': weight,
+          'healthData.height': height,
+          'healthData.imc': parseFloat(imc),
+          'healthData.dietRecommendation': dietRecommendation,
+        },
       }
     );
 
     if (result.modifiedCount === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado o sin cambios' });
+      return res.status(404).json({ message: 'Usuario no encontrado o sin cambios.' });
     }
 
-    res.status(200).json({ message: 'Datos de salud actualizados' });
+    res.status(200).json({
+      message: 'Perfil de salud actualizado exitosamente.',
+      healthData: {
+        weight,
+        height,
+        imc,
+        dietRecommendation,
+      },
+    });
   } catch (error) {
-    console.error('Error al actualizar los datos de salud:', error);
-    res.status(500).json({ message: 'Error al actualizar los datos de salud' });
+    console.error('Error al actualizar el perfil de salud:', error.message);
+    res.status(500).json({ message: 'Error al actualizar el perfil de salud.', error: error.message });
   }
 });
+
 
 // Ruta protegida para acceder al perfil de usuario solo con token válido
 app.get('/perfil', authenticateToken, async (req, res) => {
