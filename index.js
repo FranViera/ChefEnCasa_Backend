@@ -502,6 +502,84 @@ async function obtenerRecetaDeSpoonacular(recipeId) {
   }
 }
 
+//=======================================================IMPORTAR RECETAS PREMIUM
+//=============================================================IMPORTAR RECETAS PREMIUM ===============================================
+app.post('/importar-recetas-premium', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const cantidadRecetas = 50; // Cantidad de recetas a obtener por cada solicitud a la API
+    let recetasImportadas = 0;
+    let offset = 0;
+
+    while (recetasImportadas < 500) { // Puedes ajustar el límite total de recetas
+      const params = {
+        apiKey: process.env.SPOONACULAR_API_KEY,
+        number: cantidadRecetas,
+        offset: offset,
+      };
+
+      // Obtener recetas básicas desde Spoonacular
+      const response = await axios.get(`${SPOONACULAR_API_BASE_URL}/recipes/complexSearch`, { params });
+      const recetas = response.data.results;
+
+      if (!recetas || recetas.length === 0) {
+        break;
+      }
+
+      for (const receta of recetas) {
+        // Obtener detalles completos de la receta
+        const recetaCompleta = await obtenerRecetaDeSpoonacular(receta.id);
+        // Obtener información nutricional de la receta
+        const datosNutricionales = await axios.get(
+          `${SPOONACULAR_API_BASE_URL}/recipes/${receta.id}/nutritionWidget.json`,
+          { params: { apiKey: process.env.SPOONACULAR_API_KEY } }
+        );
+
+        const recetaTraducida = {
+          recipeId: recetaCompleta.id,
+          title: await translateText(recetaCompleta.title, 'es'),
+          image: recetaCompleta.image,
+          ingredients: await Promise.all(recetaCompleta.extendedIngredients.map(async (ingrediente) => ({
+            name: await translateText(ingrediente.name, 'es'),
+            amount: ingrediente.amount,
+            unit: ingrediente.unit,
+          }))),
+          instructions: recetaCompleta.instructions
+            ? await translateText(recetaCompleta.instructions, 'es')
+            : 'No disponible',
+          readyInMinutes: recetaCompleta.readyInMinutes,
+          servings: recetaCompleta.servings,
+          type: recetaCompleta.dishTypes ? recetaCompleta.dishTypes.join(', ') : 'No especificado',
+          dateAdded: new Date(),
+          nutrition: {
+            calories: datosNutricionales.data.calories,
+            carbs: datosNutricionales.data.carbs,
+            fat: datosNutricionales.data.fat,
+            protein: datosNutricionales.data.protein,
+          },
+        };
+
+        // Guardar en la colección recetasPremium
+        await db.collection('recetasPremium').updateOne(
+          { recipeId: recetaCompleta.id },
+          { $set: recetaTraducida },
+          { upsert: true }
+        );
+
+        recetasImportadas++;
+      }
+
+      offset += cantidadRecetas;
+      console.log(`Importadas ${recetasImportadas} recetas premium hasta ahora...`);
+    }
+
+    res.status(200).json({ message: 'Recetas premium importadas y almacenadas en la base de datos', total: recetasImportadas });
+  } catch (error) {
+    console.error('Error al importar recetas premium:', error.message);
+    res.status(500).json({ error: 'Error al importar recetas premium' });
+  }
+});
+
 
 //=============================================================BUSCAR RECETAS====================================================
 //Ahora busca todas las recetas sin filtro "ingrediente", apareceran todas las recetas a menos que el usuario filtre
