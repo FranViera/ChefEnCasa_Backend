@@ -2575,26 +2575,26 @@ app.get('/perfil/allergies', authenticateToken, async (req, res) => {
 });
 
 //Guardar alergias
-app.post('/perfil/allergies', authenticateToken, async (req, res) => {
-  const { allergies } = req.body;
-
-  if (!Array.isArray(allergies)) {
-    return res.status(400).json({ message: 'Las alergias deben ser un arreglo.' });
-  }
-
+// Ruta para actualizar las alergias del usuario
+app.post('/perfil/alergias', authenticateToken, async (req, res) => {
   try {
-    const result = await usersCollection.updateOne(
-      { _id: new ObjectId(req.user.id) },
+    const userId = new ObjectId(req.user.id);
+    const { allergies } = req.body;
+
+    // Validar que `allergies` sea un arreglo
+    if (!Array.isArray(allergies)) {
+      return res.status(400).json({ message: 'Las alergias deben ser un arreglo.' });
+    }
+
+    // Actualizar el campo `allergies` del usuario
+    await usersCollection.updateOne(
+      { _id: userId },
       { $set: { allergies } }
     );
 
-    if (result.modifiedCount === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
-
     res.status(200).json({ message: 'Alergias actualizadas exitosamente.' });
   } catch (error) {
-    console.error('Error al guardar alergias:', error.message);
-    res.status(500).json({ message: 'Error al guardar alergias.', error: error.message });
+    console.error('Error al actualizar alergias:', error.message);
+    res.status(500).json({ message: 'Error al actualizar alergias.' });
   }
 });
