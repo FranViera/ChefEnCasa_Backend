@@ -981,19 +981,42 @@ app.get('/recetaPremium/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'Acceso denegado. Solo disponible para usuarios premium.' });
     }
 
+    // Si el recipeId no es un ObjectId válido, intenta buscarlo como un número en otro campo
+    let filter;
+    if (ObjectId.isValid(recipeId)) {
+      filter = { _id: new ObjectId(recipeId) };
+    } else {
+      filter = { recipeId: parseInt(recipeId, 10) }; // Busca por un campo alternativo
+    }
+
     // Buscar la receta en la colección `recetasPremium`
-    const receta = await db.collection('recetasPremium').findOne({ _id: new ObjectId(recipeId) });
+    const receta = await db.collection('recetasPremium').findOne(filter);
 
     if (!receta) {
       return res.status(404).json({ message: 'Receta premium no encontrada en la base de datos' });
     }
 
-    res.json(receta);
+    // Convertir las cantidades de los ingredientes
+    const ingredientesConvertidos = receta.ingredients.map((ingrediente) => {
+      const cantidadConvertida = convertirMedida(ingrediente.amount, ingrediente.unit, ingrediente.name);
+      return {
+        ...ingrediente,
+        amount: cantidadConvertida,
+        unit: 'gram', // Convertir las unidades a gramos o a la unidad estándar deseada
+      };
+    });
+
+    res.json({
+      ...receta,
+      ingredients: ingredientesConvertidos,
+      nutrition: receta.nutrition, // Incluir la información nutricional
+    });
   } catch (error) {
     console.error('Error al obtener detalles de la receta premium:', error.message);
     res.status(500).json({ message: 'Error al obtener detalles de la receta premium' });
   }
 });
+
 
 
 
