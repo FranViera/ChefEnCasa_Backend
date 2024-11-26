@@ -2181,19 +2181,18 @@ app.get('/receta/compartir/:id', authenticateToken, async (req, res) => {
 // Ruta para obtener el perfil de salud del usuario
 app.get('/perfil/health', authenticateToken, async (req, res) => {
   try {
-    // Obtener el usuario actual
     const usuario = await usersCollection.findOne(
       { _id: new ObjectId(req.user.id) },
-      { projection: { healthData: 1 } } // Solo devolver el campo healthData
+      { projection: { healthData: 1 } } // Solo devolver el healthData
     );
 
-    if (!usuario) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    if (!usuario || !usuario.healthData) {
+      return res.status(404).json({ message: 'Datos de salud no encontrados.' });
     }
 
     res.status(200).json({
-      message: 'Perfil de salud obtenido exitosamente.',
-      healthData: usuario.healthData || null, // Si healthData no existe, devolver null
+      message: 'Datos de salud obtenidos exitosamente.',
+      healthData: usuario.healthData,
     });
   } catch (error) {
     console.error('Error al obtener el perfil de salud:', error.message);
@@ -2270,7 +2269,7 @@ app.put('/perfil/health', authenticateToken, async (req, res) => {
   }
 });
 
-// Ruta para obtener las calorías recomendadas
+// Ruta para obtener y guardar las calorías recomendadas en el perfil de salud
 app.post('/perfil/calorias', authenticateToken, async (req, res) => {
   const { weight, height, age, gender, activityLevel } = req.body;
 
@@ -2306,8 +2305,26 @@ app.post('/perfil/calorias', authenticateToken, async (req, res) => {
 
     const caloricNeeds = (tmb * factor).toFixed(0); // Calorías diarias recomendadas
 
+    // Guardar las calorías en el perfil de salud del usuario
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(req.user.id) },
+      {
+        $set: {
+          'healthData.caloricNeeds': parseInt(caloricNeeds),
+          'healthData.tmb': parseFloat(tmb),
+          'healthData.age': age,
+          'healthData.gender': gender,
+          'healthData.activityLevel': activityLevel,
+        },
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado o sin cambios.' });
+    }
+
     res.status(200).json({
-      message: 'Calorías calculadas exitosamente.',
+      message: 'Calorías calculadas y guardadas exitosamente.',
       caloricNeeds,
       tmb,
     });
@@ -2316,7 +2333,6 @@ app.post('/perfil/calorias', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al calcular las calorías.', error: error.message });
   }
 });
-
 
 // Ruta protegida para acceder al perfil de usuario solo con token válido
 app.get('/perfil', authenticateToken, async (req, res) => {
