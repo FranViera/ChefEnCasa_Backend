@@ -243,20 +243,30 @@ app.post('/register', async (req, res) => {
 
     // Crear el nuevo usuario
     const nuevoUsuario = {
-      nombre,
-      email,
-      password: hashedPassword,
-      telefono: {
-        prefijo: telefono.prefijo,
-        numero: telefono.numero,
-      },
-      diet: diet || null,
-      allergies: allergies || [],
-      role: role || 'user',
-      policiesAccepted: true,
-      premium: premium || false, // Si no se especifica, el usuario no es premium por defecto
-      healthData: premium ? { weight: null, height: null, imc: null, dietRecommendation: null } : null, // HealthData depende de si es premium
-    };
+  nombre,
+  email,
+  password: hashedPassword,
+  telefono: {
+    prefijo: telefono.prefijo,
+    numero: telefono.numero,
+  },
+  diet: diet || null,
+  allergies: allergies || [],
+  role: role || 'user',
+  policiesAccepted: true,
+  premium: premium || false, // Si no se especifica, el usuario no es premium por defecto
+  healthData: premium
+    ? { 
+        weight: null, 
+        height: null, 
+        imc: null, 
+        dietRecommendation: null, 
+        caloricNeeds: null, 
+        tmb: null 
+      }
+    : null, // HealthData depende de si es premium
+};
+
 
     // Guardar el nuevo usuario en la base de datos
     await usersCollection.insertOne(nuevoUsuario);
