@@ -651,7 +651,11 @@ app.get('/api/recetasPremium', authenticateToken, async (req, res) => {
       ...(time && { readyInMinutes: { $lte: Number(time) } }), // Filtro por tiempo máximo
       ...(maxServings && { servings: { $lte: Number(maxServings) } }), // Filtro por máximo de porciones
       ...(diet && { type: diet }), // Filtro por tipo de dieta
-      ...(maxCalories && { 'nutrition.calories': { $lte: Number(maxCalories) } }), // Filtro por calorías
+      ...(maxCalories && {
+        $expr: {
+          $lte: [{ $toInt: '$nutrition.calories' }, Number(maxCalories)]
+        }
+      }), // Filtro por calorías
     };
 
     // Agregar el filtro de intolerancias del usuario
@@ -668,6 +672,7 @@ app.get('/api/recetasPremium', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al buscar recetas premium' });
   }
 });
+
 
 
 
