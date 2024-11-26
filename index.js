@@ -217,6 +217,7 @@ app.post('/accept-policies', authenticateToken, async (req, res) => {
   });
 
 // Ruta de registro de usuarios
+// Ruta de registro de usuarios
 app.post('/register', async (req, res) => {
   const { nombre, email, password, policiesAccepted, telefono, diet, allergies, role, premium } = req.body;
 
@@ -254,6 +255,7 @@ app.post('/register', async (req, res) => {
       role: role || 'user',
       policiesAccepted: true,
       premium: premium || false, // Si no se especifica, el usuario no es premium por defecto
+      healthData: premium ? { weight: null, height: null, imc: null, dietRecommendation: null } : null, // HealthData depende de si es premium
     };
 
     // Guardar el nuevo usuario en la base de datos
@@ -273,6 +275,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Error al registrar usuario', error: error.message });
   }
 });
+
 
 
   // Ruta de login de usuarios
