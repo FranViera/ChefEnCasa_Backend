@@ -967,6 +967,49 @@ app.get('/receta/:id', authenticateToken, async (req, res) => {
   }
 });
 
+//============================================INFO RECETA PREMIUM=============================================
+
+app.get('/recetaPremium/:id', authenticateToken, async (req, res) => {
+  const recipeId = req.params.id;
+
+  try {
+    const db = await connectToDatabase();
+    
+    // Verificar si el usuario es premium
+    const usuario = await db.collection('usuarios').findOne({ _id: new ObjectId(req.user.id) });
+    if (!usuario || !usuario.premium) {
+      return res.status(403).json({ message: 'Acceso denegado. Solo disponible para usuarios premium.' });
+    }
+
+    // Buscar la receta en la colección `recetasPremium`
+    const receta = await db.collection('recetasPremium').findOne({ _id: new ObjectId(recipeId) });
+
+    if (!receta) {
+      return res.status(404).json({ message: 'Receta premium no encontrada en la base de datos' });
+    }
+
+    // Convertir las cantidades de los ingredientes
+    const ingredientesConvertidos = receta.ingredients.map((ingrediente) => {
+      const cantidadConvertida = convertirMedida(ingrediente.amount, ingrediente.unit, ingrediente.name);
+      return {
+        ...ingrediente,
+        amount: cantidadConvertida,
+        unit: 'gram' // Convertir las unidades a gramos o a la unidad estándar deseada
+      };
+    });
+
+    res.json({
+      ...receta,
+      ingredients: ingredientesConvertidos,
+      nutrition: receta.nutrition, // Incluir la información nutricional
+    });
+  } catch (error) {
+    console.error('Error al obtener detalles de la receta premium:', error.message);
+    res.status(500).json({ message: 'Error al obtener detalles de la receta premium' });
+  }
+});
+
+
 /*
 // Función para obtener detalles de la receta desde Spoonacular
 async function obtenerRecetaDeSpoonacular(recipeId) {
