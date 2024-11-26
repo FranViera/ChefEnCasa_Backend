@@ -2270,6 +2270,52 @@ app.put('/perfil/health', authenticateToken, async (req, res) => {
   }
 });
 
+// Ruta para obtener las calorías recomendadas
+app.post('/perfil/calorias', authenticateToken, async (req, res) => {
+  const { weight, height, age, gender, activityLevel } = req.body;
+
+  // Validar que los datos requeridos están presentes
+  if (!weight || !height || !age || !gender || !activityLevel) {
+    return res.status(400).json({ message: 'Debe proporcionar peso, altura, edad, género y nivel de actividad.' });
+  }
+
+  try {
+    // Calcular la Tasa Metabólica Basal (TMB)
+    let tmb;
+    if (gender.toLowerCase() === 'male') {
+      tmb = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else if (gender.toLowerCase() === 'female') {
+      tmb = 10 * weight + 6.25 * height - 5 * age - 161;
+    } else {
+      return res.status(400).json({ message: 'Género inválido. Use "male" o "female".' });
+    }
+
+    // Multiplicar la TMB por el factor de actividad física
+    const activityFactors = {
+      sedentary: 1.2,
+      light: 1.375,
+      moderate: 1.55,
+      active: 1.725,
+      very_active: 1.9,
+    };
+
+    const factor = activityFactors[activityLevel.toLowerCase()];
+    if (!factor) {
+      return res.status(400).json({ message: 'Nivel de actividad inválido.' });
+    }
+
+    const caloricNeeds = (tmb * factor).toFixed(0); // Calorías diarias recomendadas
+
+    res.status(200).json({
+      message: 'Calorías calculadas exitosamente.',
+      caloricNeeds,
+      tmb,
+    });
+  } catch (error) {
+    console.error('Error al calcular las calorías:', error.message);
+    res.status(500).json({ message: 'Error al calcular las calorías.', error: error.message });
+  }
+});
 
 
 // Ruta protegida para acceder al perfil de usuario solo con token válido
