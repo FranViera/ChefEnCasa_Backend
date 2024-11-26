@@ -2061,6 +2061,7 @@ app.get('/recetas/valoradas-recientes', authenticateToken, async (req, res) => {
   }
 });
 
+
 //==============================GUARDAR/ELIMINAR RECETA=======================================
 //============================================================================================
 // Guardar receta en favoritos
@@ -2204,13 +2205,23 @@ app.get('/perfil/health', authenticateToken, async (req, res) => {
       { projection: { healthData: 1 } } // Solo devolver el healthData
     );
 
-    if (!usuario || !usuario.healthData) {
-      return res.status(404).json({ message: 'Datos de salud no encontrados.' });
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
     }
+
+    // Si no hay datos de salud, devolver un objeto vacío en lugar de null
+    const healthData = usuario.healthData || {
+      weight: null,
+      height: null,
+      imc: null,
+      dietRecommendation: null,
+      caloricNeeds: null,
+      tmb: null,
+    };
 
     res.status(200).json({
       message: 'Datos de salud obtenidos exitosamente.',
-      healthData: usuario.healthData,
+      healthData,
     });
   } catch (error) {
     console.error('Error al obtener el perfil de salud:', error.message);
