@@ -2280,3 +2280,59 @@ app.put('/reclamos/marcar-leido', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al marcar la consulta como leída', error: error.message });
   }
 });
+
+//=======================================VALIDACION PREMIUM
+function checkPremium(req, res, next) {
+  if (!req.user.premium) {
+    return res.status(403).json({ message: 'Acceso restringido a usuarios premium.' });
+  }
+  next();
+}
+
+// Ruta accesible solo para usuarios premium
+app.get('/funcionalidad-premium', authenticateToken, checkPremium, (req, res) => {
+  res.json({ message: 'Bienvenido a la funcionalidad premium.' });
+});
+
+app.put('/usuario/premium', authenticateToken, async (req, res) => {
+  const { premium } = req.body;
+
+  if (typeof premium !== 'boolean') {
+    return res.status(400).json({ message: 'El estado premium debe ser un valor booleano.' });
+  }
+
+  try {
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(req.user.id) },
+      { $set: { premium } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado o sin cambios.' });
+    }
+
+    res.status(200).json({ message: `Estado premium actualizado a ${premium}` });
+  } catch (error) {
+    console.error('Error al actualizar estado premium:', error.message);
+    res.status(500).json({ message: 'Error al actualizar estado premium.', error: error.message });
+  }
+});
+
+//===================================SIMULACION PAGO PREMIUM
+app.post('/simular-pago', authenticateToken, async (req, res) => {
+  try {
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(req.user.id) },
+      { $set: { premium: true } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json({ message: 'Usuario ahora es premium.' });
+  } catch (error) {
+    console.error('Error al simular pago:', error.message);
+    res.status(500).json({ message: 'Error al simular pago.', error: error.message });
+  }
+});
