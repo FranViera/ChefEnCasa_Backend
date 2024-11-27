@@ -1655,25 +1655,37 @@ app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
   }
 });
 
-// Obtener las últimas recetas preparadas por el usuario
-app.get('/api/recetas-preparadas', authenticateToken, async (req, res) => {
+// Obtener las últimas recetas preparadas junto con la imagen
+app.get('/api/ultimas-recetas-preparadas', authenticateToken, async (req, res) => {
   try {
     const usuarioId = new ObjectId(req.user.id);
     const db = await connectToDatabase();
 
-    // Obtener las últimas recetas preparadas por el usuario, ordenadas por fecha
+    // Obtener las últimas recetas preparadas del usuario
     const recetasPreparadas = await db.collection('recetasPreparadas')
       .find({ usuarioId })
-      .sort({ fechaPreparacion: -1 }) // Ordenar por fecha descendente
+      .sort({ fechaPreparacion: -1 }) // Ordenar por fecha de preparación descendente
       .limit(10) // Limitar a las últimas 10 recetas
       .toArray();
 
-    res.status(200).json({ recetas: recetasPreparadas });
+    // Para cada receta preparada, buscar la imagen en la colección 'recetas'
+    const recetasConImagen = await Promise.all(
+      recetasPreparadas.map(async (receta) => {
+        const recetaBase = await db.collection('recetas').findOne({ recipeId: receta.recipeId });
+        return {
+          ...receta,
+          image: recetaBase ? recetaBase.image : null, // Agregar la imagen si existe
+        };
+      })
+    );
+
+    res.json(recetasConImagen);
   } catch (error) {
-    console.error('Error al obtener las recetas preparadas:', error.message);
-    res.status(500).json({ error: 'Error al obtener las recetas preparadas' });
+    console.error('Error al obtener las últimas recetas preparadas:', error.message);
+    res.status(500).json({ error: 'Error al obtener las últimas recetas preparadas' });
   }
 });
+
 
 
 
