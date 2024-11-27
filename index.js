@@ -1617,6 +1617,32 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
   }
 });
 
+// Registrar receta preparada
+app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
+  const { nombreReceta, ingredientes } = req.body;
+
+  if (!nombreReceta || !ingredientes || ingredientes.length === 0) {
+    return res.status(400).json({ message: 'Debe proporcionar el nombre de la receta y los ingredientes.' });
+  }
+
+  try {
+    const usuarioId = new ObjectId(req.user.id);
+    const db = await connectToDatabase();
+
+    // Insertar la receta preparada en la colección
+    await db.collection('recetasPreparadas').insertOne({
+      usuarioId,
+      nombreReceta,
+      ingredientes,
+      fechaPreparacion: new Date() // Fecha actual
+    });
+
+    res.status(201).json({ message: 'Receta preparada registrada exitosamente.' });
+  } catch (error) {
+    console.error('Error al registrar receta preparada:', error.message);
+    res.status(500).json({ error: 'Error al registrar receta preparada' });
+  }
+});
 
 
 /*
