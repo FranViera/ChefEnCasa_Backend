@@ -836,21 +836,45 @@ async function obtenerIngredientesReceta(recipeId) {
 app.get('/api/recetas-breakfast', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+
+    // Obtener el almacén del usuario
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
+
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', results: [] });
+    }
 
     // Filtro para recetas con el tipo "breakfast"
-    const filter = {
-      type: /breakfast/i, // El campo "type" debe contener "breakfast" (sin importar si tiene otros valores)
-    };
+    const filter = { type: /breakfast/i };
 
-    // Consulta a la base de datos para obtener las recetas filtradas
+    // Consultar recetas de desayuno
     const recetas = await db.collection('recetas').find(filter).toArray();
 
-    res.json({ results: recetas });
+    // Filtrar recetas con al menos el 30% de coincidencia
+    const recetasFiltradas = recetas.map((receta) => {
+      if (!receta.ingredients || !Array.isArray(receta.ingredients)) return null;
+
+      let ingredientesCoinciden = 0;
+      receta.ingredients.forEach((ingrediente) => {
+        const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+        if (ingredienteEnAlmacen) ingredientesCoinciden++;
+      });
+
+      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      if (porcentajeCoincidencia >= 30) {
+        return { ...receta, porcentajeCoincidencia };
+      }
+      return null;
+    }).filter(Boolean);
+
+    res.json({ results: recetasFiltradas });
   } catch (error) {
     console.error('Error al buscar recetas de desayuno:', error.message);
     res.status(500).json({ error: 'Error al buscar recetas de desayuno' });
   }
 });
+
 
 //======================================================RECETAS CENA FILTRADAS==============================
 app.get('/api/recetas-dinner', authenticateToken, async (req, res) => {
