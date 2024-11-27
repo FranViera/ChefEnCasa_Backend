@@ -1376,49 +1376,53 @@ app.get('/almacen', authenticateToken, async (req, res) => {
 });
 
 // Ruta para agregar ingredientes al almacén
+// Ruta para registrar ingredientes (incluyendo perecederos)
 app.post('/almacen/registro', authenticateToken, async (req, res) => {
   const { ingredientes } = req.body;
 
   try {
     const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
 
-    const ingredientesParaRegistrar = await Promise.all(
-      ingredientes.map(async (ing) => {
-        const nombreParaBuscar = ing.nombreOriginal || ing.nombre || ing.nombreEspanol;
-        if (!nombreParaBuscar) {
-          throw new Error(`El ingrediente no tiene nombre válido: ${JSON.stringify(ing)}`);
-        }
+    for (const ing of ingredientes) {
+      const perecedero = ing.perecedero || false;
+      const fechaCaducidad = perecedero
+        ? ing.fechaCaducidad || new Date(new Date().setDate(new Date().getDate() + 7)) // 7 días por defecto
+        : null;
 
-        const ingredienteDb = await db.collection('ingredientes').findOne({
-          $or: [
-            { nombreOriginal: nombreParaBuscar.toLowerCase() },
-            { nombreEspanol: nombreParaBuscar.toLowerCase() }
-          ]
-        });
+      const ingrediente = {
+        nombre: ing.nombre.toLowerCase(),
+        cantidad: ing.cantidad,
+        img: ing.img || '',
+        fechaIngreso: new Date(),
+        perecedero,
+        ...(perecedero && { fechaCaducidad }),
+      };
 
-        if (!ingredienteDb) {
-          throw new Error(`El ingrediente ${nombreParaBuscar} no existe en la base de datos de ingredientes`);
-        }
+      const almacen = await db.collection('almacen').findOne({ usuarioId });
 
-        // Aquí se asegura de que la imagen esté presente en el objeto que se guardará en el almacén
-        return {
-          nombre: nombreParaBuscar.toLowerCase(),
-          nombreEspanol: ingredienteDb.nombreEspanol || ing.nombreEspanol,
-          cantidad: ing.cantidad,
-          img: ing.image || ingredienteDb.image, // Verificar que la imagen existe en 'ing' o 'ingredienteDb'
-          fechaIngreso: new Date(),
-          perecedero: ing.perecedero || false
-        };
-      })
-    );
+      if (perecedero) {
+        await db.collection('almacen').updateOne(
+          { usuarioId },
+          { $push: { ingredientesPerecibles: ingrediente } },
+          { upsert: true }
+        );
+      } else {
+        await db.collection('almacen').updateOne(
+          { usuarioId },
+          { $push: { ingredientes: ingrediente } },
+          { upsert: true }
+        );
+      }
+    }
 
-    await crearOActualizarAlmacen(db, req.user.id, ingredientesParaRegistrar);
-    res.status(200).json({ message: 'Alimentos registrados o actualizados en el almacén' });
+    res.status(200).json({ message: 'Ingredientes registrados correctamente' });
   } catch (error) {
-    console.error('Error al registrar alimentos:', error);
-    res.status(500).json({ error: 'Error al registrar alimentos' });
+    console.error('Error al registrar ingredientes:', error.message);
+    res.status(500).json({ error: 'Error al registrar ingredientes' });
   }
 });
+
 
 // Eliminar un ingrediente completo del almacén
 app.delete('/almacen/eliminar', authenticateToken, async (req, res) => {
@@ -1449,54 +1453,39 @@ app.delete('/almacen/eliminar', authenticateToken, async (req, res) => {
   }
 });
 
-// Reducir la cantidad de un ingrediente en el almacén
+// Reducir cantidad y eliminar si llega a 0
 app.put('/almacen/reducir', authenticateToken, async (req, res) => {
-  const { nombreIngrediente, cantidadReducir } = req.body;
+  const { nombreIngrediente, cantidadReducir, perecedero } = req.body;
 
   try {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
 
-    // Buscar el ingrediente en la colección de ingredientes importados
-    const ingredienteDb = await db.collection('ingredientes').findOne({ nombreOriginal: nombreIngrediente.toLowerCase() });
-    if (!ingredienteDb) {
-      return res.status(400).json({ message: `El ingrediente ${nombreIngrediente} no existe en la base de datos` });
+    const collectionField = perecedero ? 'ingredientesPerecibles' : 'ingredientes';
+    const ingredienteField = perecedero ? 'ingredientesPerecibles.$.cantidad' : 'ingredientes.$.cantidad';
+
+    const result = await db.collection('almacen').updateOne(
+      { usuarioId, [`${collectionField}.nombre`]: nombreIngrediente.toLowerCase() },
+      { $inc: { [ingredienteField]: -cantidadReducir } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(400).json({ message: 'No se pudo reducir la cantidad' });
     }
 
-    // Continuar con la lógica para reducir la cantidad en el almacén del usuario
-    const almacen = await db.collection('almacen').findOne({ usuarioId });
-    if (!almacen) {
-      return res.status(404).json({ message: 'Almacén no encontrado' });
-    }
-
-    const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === nombreIngrediente.toLowerCase());
-
-    if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadReducir) {
-      return res.status(400).json({ message: 'No hay suficiente cantidad para reducir' });
-    }
-
-    // Reducir la cantidad
-    ingredienteEnAlmacen.cantidad -= cantidadReducir;
-    if (ingredienteEnAlmacen.cantidad <= 0) {
-      // Eliminar el ingrediente si la cantidad llega a 0
-      await db.collection('almacen').updateOne(
-        { usuarioId },
-        { $pull: { ingredientes: { nombre: nombreIngrediente.toLowerCase() } } }
-      );
-    } else {
-      // Actualizar la cantidad
-      await db.collection('almacen').updateOne(
-        { usuarioId, 'ingredientes.nombre': nombreIngrediente.toLowerCase() },
-        { $set: { 'ingredientes.$.cantidad': ingredienteEnAlmacen.cantidad } }
-      );
-    }
+    // Eliminar ingrediente si la cantidad llega a 0
+    await db.collection('almacen').updateOne(
+      { usuarioId },
+      { $pull: { [collectionField]: { nombre: nombreIngrediente.toLowerCase(), cantidad: { $lte: 0 } } } }
+    );
 
     res.status(200).json({ message: 'Cantidad reducida correctamente' });
   } catch (error) {
-    console.error('Error al reducir la cantidad:', error.message);
-    res.status(500).json({ error: 'Error al reducir la cantidad' });
+    console.error('Error al reducir cantidad:', error.message);
+    res.status(500).json({ error: 'Error al reducir cantidad' });
   }
 });
+
 
 // Aumentar la cantidad de un ingrediente en el almacén
 app.put('/almacen/aumentar', authenticateToken, async (req, res) => {
@@ -1573,6 +1562,28 @@ app.put('/almacen/modificar', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error al modificar la cantidad del ingrediente:', error.message);
     res.status(500).json({ error: 'Error al modificar la cantidad del ingrediente' });
+  }
+});
+
+// Verificar ingredientes caducados
+app.get('/almacen/caducados', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+    const hoy = new Date();
+
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
+
+    if (!almacen || !almacen.ingredientesPerecibles) {
+      return res.status(200).json({ message: 'No hay ingredientes perecederos en el almacén', caducados: [] });
+    }
+
+    const caducados = almacen.ingredientesPerecibles.filter(ing => new Date(ing.fechaCaducidad) < hoy);
+
+    res.status(200).json({ caducados });
+  } catch (error) {
+    console.error('Error al verificar caducados:', error.message);
+    res.status(500).json({ error: 'Error al verificar caducados' });
   }
 });
 
