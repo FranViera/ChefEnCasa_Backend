@@ -695,6 +695,11 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
     // Filtrar recetas basadas en coincidencia de ingredientes y cantidades
     const recetasRecomendadas = recomendaciones.map((receta) => {
+      if (!receta.ingredients || !Array.isArray(receta.ingredients)) {
+        console.error(`Receta inválida: ${receta.title || 'Sin título'} - Campo 'ingredients' faltante o no es un array.`);
+        return null; // Saltar recetas inválidas
+      }
+
       const faltantes = [];
       let ingredientesCoinciden = 0;
       let cantidadesSuficientes = 0;
@@ -769,6 +774,7 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al obtener recomendaciones' });
   }
 });
+
 
 
 /*
