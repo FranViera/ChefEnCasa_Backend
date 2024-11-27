@@ -32,6 +32,9 @@ app.use(express.json());
 // Usar Helmet para aumentar la seguridad agregando encabezados HTTP seguros
 app.use(helmet());
 
+// USAR ROUTER
+app.use('/', router);
+
 // Límite de peticiones por IP (Rate Limiting) para prevenir ataques de fuerza bruta
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
