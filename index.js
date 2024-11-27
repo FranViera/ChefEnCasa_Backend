@@ -1574,7 +1574,7 @@ app.put('/almacen/modificar', authenticateToken, async (req, res) => {
 
 
 // ============================================ PREPARAR RECETA ====================================
-// Descontar ingredientes del almacén al preparar receta desde Spoonacular y generar una única lista de compras
+// Descontar ingredientes del almacén al preparar receta y registrar en ingredientesUtilizados
 app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
   const { ingredientesParaDescontar } = req.body;
 
@@ -1582,19 +1582,41 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
     const usuarioId = new ObjectId(req.user.id);
     const db = await connectToDatabase();
 
+    // Array para almacenar los ingredientes que se descontaron
+    const ingredientesDescontados = [];
+
     for (const ingrediente of ingredientesParaDescontar) {
-      await db.collection('almacen').updateOne(
+      const result = await db.collection('almacen').updateOne(
         { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
         { $inc: { 'ingredientes.$.cantidad': -ingrediente.cantidad } }
       );
+
+      // Si se actualizó correctamente el ingrediente, lo agregamos a la lista de descontados
+      if (result.modifiedCount > 0) {
+        ingredientesDescontados.push({
+          nombre: ingrediente.nombre,
+          cantidad: ingrediente.cantidad,
+          unidad: ingrediente.unidad || 'gramos' // Asegúrate de registrar la unidad
+        });
+      }
     }
 
-    res.status(200).json({ message: 'Ingredientes descontados correctamente.' });
+    if (ingredientesDescontados.length > 0) {
+      // Registrar en la colección ingredientesUtilizados
+      await db.collection('ingredientesUtilizados').insertOne({
+        usuarioId,
+        ingredientes: ingredientesDescontados,
+        fechaUso: new Date() // Fecha actual
+      });
+    }
+
+    res.status(200).json({ message: 'Ingredientes descontados correctamente y registrados en ingredientes utilizados.' });
   } catch (error) {
     console.error('Error al descontar ingredientes:', error.message);
     res.status(500).json({ error: 'Error al descontar ingredientes' });
   }
 });
+
 
 
 /*
