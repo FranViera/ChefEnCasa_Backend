@@ -2888,6 +2888,7 @@ app.post('/perfil/alergias', authenticateToken, async (req, res) => {
 //====================================================META=============================
 // Ruta para obtener la meta semanal del usuario
 router.get('/meta-semanal', authenticateToken, async (req, res) => {
+  console.log('Ruta /meta-semanal fue llamada');
   try {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
