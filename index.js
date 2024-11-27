@@ -2924,4 +2924,4 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
   }
 });
 
-
+module.exports = router;
