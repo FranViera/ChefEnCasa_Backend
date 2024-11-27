@@ -1655,6 +1655,25 @@ app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
   }
 });
 
+// Obtener las últimas recetas preparadas por el usuario
+app.get('/api/recetas-preparadas', authenticateToken, async (req, res) => {
+  try {
+    const usuarioId = new ObjectId(req.user.id);
+    const db = await connectToDatabase();
+
+    // Obtener las últimas recetas preparadas por el usuario, ordenadas por fecha
+    const recetasPreparadas = await db.collection('recetasPreparadas')
+      .find({ usuarioId })
+      .sort({ fechaPreparacion: -1 }) // Ordenar por fecha descendente
+      .limit(10) // Limitar a las últimas 10 recetas
+      .toArray();
+
+    res.status(200).json({ recetas: recetasPreparadas });
+  } catch (error) {
+    console.error('Error al obtener las recetas preparadas:', error.message);
+    res.status(500).json({ error: 'Error al obtener las recetas preparadas' });
+  }
+});
 
 
 
