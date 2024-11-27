@@ -1619,17 +1619,17 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
 
 // Registrar receta preparada
 app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
-  const { nombreReceta, ingredientes, nutrition } = req.body;
+  const { recipeId, nombreReceta, ingredientes, nutrition } = req.body;
 
-  if (!nombreReceta || !ingredientes || ingredientes.length === 0) {
-    return res.status(400).json({ message: 'Debe proporcionar el nombre de la receta y los ingredientes.' });
+  if (!recipeId || !nombreReceta || !ingredientes || ingredientes.length === 0) {
+    return res.status(400).json({ message: 'Debe proporcionar el ID de la receta, el nombre y los ingredientes.' });
   }
 
   try {
     const usuarioId = new ObjectId(req.user.id);
     const db = await connectToDatabase();
 
-    // Verificar si el usuario es premium
+    // Verificar si el usuario existe
     const usuario = await db.collection('usuarios').findOne({ _id: usuarioId });
     if (!usuario) {
       return res.status(403).json({ message: 'Usuario no encontrado.' });
@@ -1638,6 +1638,7 @@ app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
     // Preparar el documento para guardar en la colección
     const recetaPreparada = {
       usuarioId,
+      recipeId, // Vincular la receta con su ID original
       nombreReceta,
       ingredientes,
       fechaPreparacion: new Date(), // Fecha actual
@@ -1653,6 +1654,7 @@ app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al registrar receta preparada' });
   }
 });
+
 
 
 
