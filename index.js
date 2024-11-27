@@ -2882,7 +2882,14 @@ app.post('/perfil/alergias', authenticateToken, async (req, res) => {
   }
 });
 
+//====================================================META=============================
 // Ruta para obtener la meta semanal del usuario
+const express = require('express');
+const router = express.Router();
+const { ObjectId } = require('mongodb');
+const { authenticateToken } = require('../middleware/authenticateToken');
+const { connectToDatabase } = require('../db');
+
 router.get('/meta-semanal', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
@@ -2898,7 +2905,7 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
       fechaPreparacion: { $gte: haceUnaSemana },
     }).toArray();
 
-    // Calcular totales de calorías, carbohidratos y proteínas
+    // Inicializar variables para los cálculos
     let totalKcal = 0;
     let totalCarbs = 0;
     let totalProtein = 0;
@@ -2912,6 +2919,7 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
       Dom: 0,
     };
 
+    // Procesar las recetas preparadas
     recetasPreparadas.forEach((receta) => {
       if (receta.nutrition) {
         const { calories, carbs, protein } = receta.nutrition;
@@ -2920,11 +2928,13 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
         totalCarbs += parseInt(carbs?.replace('g', '') || 0);
         totalProtein += parseInt(protein?.replace('g', '') || 0);
 
-        // Agregar al consumo diario
+        // Registrar el consumo diario
         const diaSemana = new Date(receta.fechaPreparacion).toLocaleDateString('es-ES', {
           weekday: 'short',
         });
-        consumoDiario[diaSemana] += parseInt(calories || 0);
+        if (consumoDiario[diaSemana] !== undefined) {
+          consumoDiario[diaSemana] += parseInt(calories || 0);
+        }
       }
     });
 
@@ -2941,3 +2951,4 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
