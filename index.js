@@ -2884,11 +2884,6 @@ app.post('/perfil/alergias', authenticateToken, async (req, res) => {
 
 //====================================================META=============================
 // Ruta para obtener la meta semanal del usuario
-const express = require('express');
-const router = express.Router();
-const { ObjectId } = require('mongodb');
-const { authenticateToken } = require('../middleware/authenticateToken');
-const { connectToDatabase } = require('../db');
 
 router.get('/meta-semanal', authenticateToken, async (req, res) => {
   try {
