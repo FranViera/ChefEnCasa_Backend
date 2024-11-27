@@ -1,5 +1,4 @@
 // Importar dependencias necesarias
-const router = express.Router();
 const express = require('express');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const dotenv = require('dotenv');
@@ -21,6 +20,7 @@ const { crearOActualizarAlmacen } = require('./models/Almacen'); // Importar las
 const { getNoticias } = require('./models/newsService');
 const path = require('path');
 require('dotenv').config();
+const router = express.Router();
 
 // Cargar las variables de entorno desde el archivo .env
 dotenv.config();
