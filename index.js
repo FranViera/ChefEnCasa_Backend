@@ -2887,11 +2887,19 @@ app.post('/perfil/alergias', authenticateToken, async (req, res) => {
 
 //====================================================META=============================
 // Ruta para obtener la meta semanal del usuario
-
 router.get('/meta-semanal', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
+
+    // Obtener los datos del usuario para incluir el TMB
+    const usuario = await db.collection('usuarios').findOne({ _id: usuarioId });
+
+    if (!usuario || !usuario.healthData || !usuario.healthData.tmb) {
+      return res.status(400).json({ error: 'No se encontraron datos de TMB para este usuario' });
+    }
+
+    const tmb = usuario.healthData.tmb; // Obtiene el TMB del usuario
 
     // Consultar recetas preparadas en la última semana
     const haceUnaSemana = new Date();
@@ -2917,6 +2925,7 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
       totalCarbs,
       totalProtein,
       consumoDiario,
+      tmb, // Incluye el TMB en la respuesta
     });
   } catch (error) {
     console.error('Error al obtener la meta semanal:', error);
@@ -2925,3 +2934,4 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
