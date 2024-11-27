@@ -2890,48 +2890,24 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
 
-    // Obtener la fecha de hace 7 días
+    // Consultar recetas preparadas en la última semana
     const haceUnaSemana = new Date();
     haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
 
-    // Consultar recetas preparadas en la última semana
     const recetasPreparadas = await db.collection('recetasPreparadas').find({
       usuarioId: usuarioId,
       fechaPreparacion: { $gte: haceUnaSemana },
     }).toArray();
 
-    // Inicializar variables para los cálculos
-    let totalKcal = 0;
-    let totalCarbs = 0;
-    let totalProtein = 0;
-    let consumoDiario = {
-      Lun: 0,
-      Mar: 0,
-      Mié: 0,
-      Jue: 0,
-      Vie: 0,
-      Sáb: 0,
-      Dom: 0,
-    };
+    const totalKcal = recetasPreparadas.reduce((sum, r) => sum + parseInt(r.nutrition?.calories || 0), 0);
+    const totalCarbs = recetasPreparadas.reduce((sum, r) => sum + parseInt(r.nutrition?.carbs?.replace('g', '') || 0), 0);
+    const totalProtein = recetasPreparadas.reduce((sum, r) => sum + parseInt(r.nutrition?.protein?.replace('g', '') || 0), 0);
 
-    // Procesar las recetas preparadas
-    recetasPreparadas.forEach((receta) => {
-      if (receta.nutrition) {
-        const { calories, carbs, protein } = receta.nutrition;
-
-        totalKcal += parseInt(calories || 0);
-        totalCarbs += parseInt(carbs?.replace('g', '') || 0);
-        totalProtein += parseInt(protein?.replace('g', '') || 0);
-
-        // Registrar el consumo diario
-        const diaSemana = new Date(receta.fechaPreparacion).toLocaleDateString('es-ES', {
-          weekday: 'short',
-        });
-        if (consumoDiario[diaSemana] !== undefined) {
-          consumoDiario[diaSemana] += parseInt(calories || 0);
-        }
-      }
-    });
+    const consumoDiario = recetasPreparadas.reduce((acc, receta) => {
+      const dia = new Date(receta.fechaPreparacion).toLocaleDateString('es-ES', { weekday: 'short' });
+      acc[dia] = (acc[dia] || 0) + parseInt(receta.nutrition?.calories || 0);
+      return acc;
+    }, {});
 
     res.status(200).json({
       totalKcal,
@@ -2945,5 +2921,4 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
 
