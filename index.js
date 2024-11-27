@@ -2880,3 +2880,63 @@ app.post('/perfil/alergias', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al actualizar alergias.' });
   }
 });
+
+// Ruta para obtener la meta semanal del usuario
+router.get('/meta-semanal', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+
+    // Obtener la fecha de hace 7 días
+    const haceUnaSemana = new Date();
+    haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
+
+    // Consultar recetas preparadas en la última semana
+    const recetasPreparadas = await db.collection('recetasPreparadas').find({
+      usuarioId: usuarioId,
+      fechaPreparacion: { $gte: haceUnaSemana },
+    }).toArray();
+
+    // Calcular totales de calorías, carbohidratos y proteínas
+    let totalKcal = 0;
+    let totalCarbs = 0;
+    let totalProtein = 0;
+    let consumoDiario = {
+      Lun: 0,
+      Mar: 0,
+      Mié: 0,
+      Jue: 0,
+      Vie: 0,
+      Sáb: 0,
+      Dom: 0,
+    };
+
+    recetasPreparadas.forEach((receta) => {
+      if (receta.nutrition) {
+        const { calories, carbs, protein } = receta.nutrition;
+
+        totalKcal += parseInt(calories || 0);
+        totalCarbs += parseInt(carbs?.replace('g', '') || 0);
+        totalProtein += parseInt(protein?.replace('g', '') || 0);
+
+        // Agregar al consumo diario
+        const diaSemana = new Date(receta.fechaPreparacion).toLocaleDateString('es-ES', {
+          weekday: 'short',
+        });
+        consumoDiario[diaSemana] += parseInt(calories || 0);
+      }
+    });
+
+    res.status(200).json({
+      totalKcal,
+      totalCarbs,
+      totalProtein,
+      consumoDiario,
+    });
+  } catch (error) {
+    console.error('Error al obtener la meta semanal:', error);
+    res.status(500).json({ error: 'Error al obtener la meta semanal' });
+  }
+});
+
+module.exports = router;
