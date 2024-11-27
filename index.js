@@ -880,56 +880,115 @@ app.get('/api/recetas-breakfast', authenticateToken, async (req, res) => {
 app.get('/api/recetas-dinner', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
 
-    // Filtro para recetas con el tipo "dinner"
-    const filter = {
-      type: /dinner/i, // El campo "type" debe contener "dinner" (sin importar si tiene otros valores)
-    };
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
 
-    // Consulta a la base de datos para obtener las recetas filtradas
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', results: [] });
+    }
+
+    const filter = { type: /dinner/i };
+
     const recetas = await db.collection('recetas').find(filter).toArray();
 
-    res.json({ results: recetas });
+    const recetasFiltradas = recetas.map((receta) => {
+      if (!receta.ingredients || !Array.isArray(receta.ingredients)) return null;
+
+      let ingredientesCoinciden = 0;
+      receta.ingredients.forEach((ingrediente) => {
+        const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+        if (ingredienteEnAlmacen) ingredientesCoinciden++;
+      });
+
+      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      if (porcentajeCoincidencia >= 30) {
+        return { ...receta, porcentajeCoincidencia };
+      }
+      return null;
+    }).filter(Boolean);
+
+    res.json({ results: recetasFiltradas });
   } catch (error) {
     console.error('Error al buscar recetas de cena:', error.message);
     res.status(500).json({ error: 'Error al buscar recetas de cena' });
   }
 });
 
+
 //======================================================RECETAS ALMUERZO FILTRADAS==============================
 app.get('/api/recetas-lunch', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
 
-    // Filtro para recetas con el tipo "lunch"
-    const filter = {
-      type: /lunch/i, // El campo "type" debe contener "lunch" (sin importar si tiene otros valores)
-    };
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
 
-    // Consulta a la base de datos para obtener las recetas filtradas
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', results: [] });
+    }
+
+    const filter = { type: /lunch/i };
+
     const recetas = await db.collection('recetas').find(filter).toArray();
 
-    res.json({ results: recetas });
+    const recetasFiltradas = recetas.map((receta) => {
+      if (!receta.ingredients || !Array.isArray(receta.ingredients)) return null;
+
+      let ingredientesCoinciden = 0;
+      receta.ingredients.forEach((ingrediente) => {
+        const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+        if (ingredienteEnAlmacen) ingredientesCoinciden++;
+      });
+
+      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      if (porcentajeCoincidencia >= 30) {
+        return { ...receta, porcentajeCoincidencia };
+      }
+      return null;
+    }).filter(Boolean);
+
+    res.json({ results: recetasFiltradas });
   } catch (error) {
     console.error('Error al buscar recetas de almuerzo:', error.message);
     res.status(500).json({ error: 'Error al buscar recetas de almuerzo' });
   }
 });
 
-//======================================================RECETAS POSTRES FILTRADAS==============================
+
+//======================================================RECETAS POSTRES o SNACKS FILTRADAS==============================
 app.get('/api/recetas-dessert', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
 
-    // Filtro para recetas con el tipo "snack"
-    const filter = {
-      type: /snack/i, // El campo "type" debe contener "dessert" (sin importar si tiene otros valores)
-    };
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
 
-    // Consulta a la base de datos para obtener las recetas filtradas
+    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', results: [] });
+    }
+
+    const filter = { type: /snack/i };
+
     const recetas = await db.collection('recetas').find(filter).toArray();
 
-    res.json({ results: recetas });
+    const recetasFiltradas = recetas.map((receta) => {
+      if (!receta.ingredients || !Array.isArray(receta.ingredients)) return null;
+
+      let ingredientesCoinciden = 0;
+      receta.ingredients.forEach((ingrediente) => {
+        const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+        if (ingredienteEnAlmacen) ingredientesCoinciden++;
+      });
+
+      const porcentajeCoincidencia = (ingredientesCoinciden / receta.ingredients.length) * 100;
+      if (porcentajeCoincidencia >= 30) {
+        return { ...receta, porcentajeCoincidencia };
+      }
+      return null;
+    }).filter(Boolean);
+
+    res.json({ results: recetasFiltradas });
   } catch (error) {
     console.error('Error al buscar recetas de postres:', error.message);
     res.status(500).json({ error: 'Error al buscar recetas de postres' });
