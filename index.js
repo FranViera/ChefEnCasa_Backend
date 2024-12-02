@@ -3019,13 +3019,21 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
 
 module.exports = router;
 
-//========================================SABIAS QUE==============================
+// ======================================== ENDPOINT SABIAS QUE ========================================
+async function obtenerSabiasQue() {
+  const db = await connectToDatabase();
+  return await db.collection('sabiasQue').find({}).toArray();
+}
+
 app.get('/sabiasque', async (req, res) => {
   try {
-    const data = await obtenerSabiasQue(); // Lógica para obtener los datos
-    if (!data) {
+    console.log('Consultando datos de "¿Sabías que?"');
+    const data = await obtenerSabiasQue();
+    if (!data || data.length === 0) {
+      console.log('No se encontraron datos.');
       return res.status(404).json({ error: 'No se encontraron datos' });
     }
+    console.log('Datos obtenidos:', data);
     res.status(200).json(data);
   } catch (error) {
     console.error('Error en /sabiasque:', error);
