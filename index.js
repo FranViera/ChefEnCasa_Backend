@@ -1980,6 +1980,7 @@ app.put('/lista-de-compras/marcar-comprado', authenticateToken, async (req, res)
 });
 
 // Ruta para transferir ingredientes comprados al almacén
+// Ruta para transferir ingredientes comprados al almacén
 app.put('/lista-de-compras/transferir-al-almacen', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
@@ -1994,30 +1995,50 @@ app.put('/lista-de-compras/transferir-al-almacen', authenticateToken, async (req
     const ingredientesComprados = listaDeCompras.ingredientes.filter(ingrediente => ingrediente.comprado);
 
     for (const ingrediente of ingredientesComprados) {
+      // Buscar la imagen del ingrediente en la colección de ingredientes
+      const ingredienteDb = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.nombre });
+
       const ingredienteEnAlmacen = await db.collection('almacen').findOne({
         usuarioId,
-        'ingredientes.nombre': ingrediente.nombre
+        'ingredientes.nombre': ingrediente.nombre,
       });
 
       if (ingredienteEnAlmacen) {
+        // Si ya existe en el almacén, incrementa la cantidad
         await db.collection('almacen').updateOne(
           { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
           { $inc: { 'ingredientes.$.cantidad': ingrediente.cantidad } }
         );
       } else {
+        // Si no existe, agrégalo al almacén con la imagen (si disponible)
         await db.collection('almacen').updateOne(
           { usuarioId },
-          { $push: { ingredientes: { nombre: ingrediente.nombre, cantidad: ingrediente.cantidad, perecedero: true } } }
+          {
+            $push: {
+              ingredientes: {
+                nombre: ingrediente.nombre,
+                cantidad: ingrediente.cantidad,
+                img: ingredienteDb ? ingredienteDb.image : ingrediente.img || '', // Usa la imagen de la base de datos o la lista
+                fechaIngreso: new Date(),
+                perecedero: false, // Suponiendo que no perecedero por defecto
+              },
+            },
+          },
+          { upsert: true }
         );
       }
     }
 
+    // Eliminar la lista de compras una vez transferida
     await db.collection('listasDeCompras').deleteOne({ usuarioId });
+
     res.status(200).json({ message: 'Ingredientes transferidos al almacén y lista de compras eliminada' });
   } catch (error) {
+    console.error('Error al transferir los ingredientes al almacén:', error.message);
     res.status(500).json({ message: 'Error al transferir los ingredientes al almacén', error: error.message });
   }
 });
+
 
 // Ruta para eliminar un ingrediente específico de la lista de compras
 app.delete('/lista-de-compras/eliminar-ingrediente', authenticateToken, async (req, res) => {
