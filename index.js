@@ -3019,3 +3019,14 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
 
 module.exports = router;
 
+//========================================SABIAS QUE==============================
+app.get('/sabiasque', async (req, res) => {
+  try {
+    const sabiasQueItems = await SabiasQue.find(); // Modelo de la colección
+    res.status(200).json(sabiasQueItems);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener los datos de "¿Sabías que?"', error });
+  }
+});
+
+
