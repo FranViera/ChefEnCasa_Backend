@@ -1470,6 +1470,7 @@ app.post('/almacen/registro', authenticateToken, async (req, res) => {
 
 
 // Eliminar un ingrediente completo del almacén
+// Eliminar un ingrediente completo del almacén
 app.delete('/almacen/eliminar', authenticateToken, async (req, res) => {
   const { nombreIngrediente } = req.body; // El nombre del ingrediente que se quiere eliminar
 
@@ -1481,13 +1482,20 @@ app.delete('/almacen/eliminar', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
 
-    // Buscar y eliminar el ingrediente del almacén del usuario
-    const result = await db.collection('almacen').updateOne(
+    // Intentar eliminar de la lista de ingredientes no perecederos
+    const resultNoPerecedero = await db.collection('almacen').updateOne(
       { usuarioId },
       { $pull: { ingredientes: { nombre: nombreIngrediente.toLowerCase() } } }
     );
 
-    if (result.modifiedCount === 0) {
+    // Intentar eliminar de la lista de ingredientes perecederos si no se encontró en no perecederos
+    const resultPerecedero = await db.collection('almacen').updateOne(
+      { usuarioId },
+      { $pull: { ingredientesPerecibles: { nombre: nombreIngrediente.toLowerCase() } } }
+    );
+
+    // Verificar si se eliminó el ingrediente de alguna lista
+    if (resultNoPerecedero.modifiedCount === 0 && resultPerecedero.modifiedCount === 0) {
       return res.status(404).json({ message: 'Ingrediente no encontrado en el almacén' });
     }
 
@@ -1497,6 +1505,7 @@ app.delete('/almacen/eliminar', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar el ingrediente del almacén' });
   }
 });
+
 
 // Reducir cantidad y eliminar si llega a 0
 app.put('/almacen/reducir', authenticateToken, async (req, res) => {
