@@ -1350,30 +1350,41 @@ app.get('/almacen', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const almacen = await db.collection('almacen').findOne({ usuarioId: new ObjectId(req.user.id) });
 
-    // Si el almacén no existe o no contiene ingredientes
-    if (!almacen || !almacen.ingredientes || almacen.ingredientes.length === 0) {
-      return res.status(200).json({ message: 'No hay ingredientes en el almacén', ingredientes: [] });
+    if (!almacen) {
+      return res.status(200).json({ message: 'No hay ingredientes en el almacén', ingredientes: [], ingredientesPerecibles: [] });
     }
 
-    // Actualizar los ingredientes para incluir el nombre en español
-    const ingredientesActualizados = await Promise.all(
-      almacen.ingredientes.map(async (ingrediente) => {
-        const ingredienteDb = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.nombre });
+    const actualizarIngredientes = async (lista, tipo) => {
+      return Promise.all(
+        lista.map(async (ingrediente) => {
+          const ingredienteDb = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.nombre });
+          return {
+            ...ingrediente,
+            nombreEspanol: ingredienteDb ? ingredienteDb.nombreEspanol : ingrediente.nombre,
+            img: ingrediente.img || ingredienteDb?.image || '',
+            tipo, // Agregar un flag para identificar si es perecedero o no
+          };
+        })
+      );
+    };
 
-        return {
-          ...ingrediente,
-          nombreEspanol: ingredienteDb ? ingredienteDb.nombreEspanol : ingrediente.nombre, // Usar el nombre en español si está disponible
-          img: ingrediente.img || ingredienteDb?.image || '' // Usar imagen si está disponible en la base de datos
-        };
-      })
-    );
+    const ingredientesActualizados = almacen.ingredientes
+      ? await actualizarIngredientes(almacen.ingredientes, 'no perecedero')
+      : [];
+    const pereciblesActualizados = almacen.ingredientesPerecibles
+      ? await actualizarIngredientes(almacen.ingredientesPerecibles, 'perecedero')
+      : [];
 
-    res.status(200).json({ ...almacen, ingredientes: ingredientesActualizados });
+    res.status(200).json({
+      ingredientes: ingredientesActualizados,
+      ingredientesPerecibles: pereciblesActualizados,
+    });
   } catch (error) {
     console.error('Error al obtener el almacén:', error.message);
     res.status(500).json({ error: 'Error al obtener el almacén' });
   }
 });
+
 
 // Ruta para agregar ingredientes al almacén
 // Ruta para registrar ingredientes (incluyendo perecederos)
@@ -1390,29 +1401,62 @@ app.post('/almacen/registro', authenticateToken, async (req, res) => {
         ? ing.fechaCaducidad || new Date(new Date().setDate(new Date().getDate() + 7)) // 7 días por defecto
         : null;
 
-      const ingrediente = {
-        nombre: ing.nombre.toLowerCase(),
-        cantidad: ing.cantidad,
-        img: ing.img || '',
-        fechaIngreso: new Date(),
-        perecedero,
-        ...(perecedero && { fechaCaducidad }),
-      };
-
       const almacen = await db.collection('almacen').findOne({ usuarioId });
 
       if (perecedero) {
-        await db.collection('almacen').updateOne(
-          { usuarioId },
-          { $push: { ingredientesPerecibles: ingrediente } },
-          { upsert: true }
+        // Actualizar cantidad si ya existe el ingrediente
+        const result = await db.collection('almacen').updateOne(
+          { usuarioId, 'ingredientesPerecibles.nombre': ing.nombre.toLowerCase() },
+          {
+            $inc: { 'ingredientesPerecibles.$.cantidad': ing.cantidad },
+            $set: { 'ingredientesPerecibles.$.fechaCaducidad': fechaCaducidad }, // Actualiza la fecha de caducidad si es necesario
+          }
         );
+
+        // Si no se encontró, insertar como nuevo
+        if (result.matchedCount === 0) {
+          await db.collection('almacen').updateOne(
+            { usuarioId },
+            {
+              $push: {
+                ingredientesPerecibles: {
+                  nombre: ing.nombre.toLowerCase(),
+                  cantidad: ing.cantidad,
+                  img: ing.img || '',
+                  fechaIngreso: new Date(),
+                  fechaCaducidad,
+                  perecedero: true,
+                },
+              },
+            },
+            { upsert: true }
+          );
+        }
       } else {
-        await db.collection('almacen').updateOne(
-          { usuarioId },
-          { $push: { ingredientes: ingrediente } },
-          { upsert: true }
+        // Actualizar cantidad si ya existe el ingrediente
+        const result = await db.collection('almacen').updateOne(
+          { usuarioId, 'ingredientes.nombre': ing.nombre.toLowerCase() },
+          { $inc: { 'ingredientes.$.cantidad': ing.cantidad } }
         );
+
+        // Si no se encontró, insertar como nuevo
+        if (result.matchedCount === 0) {
+          await db.collection('almacen').updateOne(
+            { usuarioId },
+            {
+              $push: {
+                ingredientes: {
+                  nombre: ing.nombre.toLowerCase(),
+                  cantidad: ing.cantidad,
+                  img: ing.img || '',
+                  fechaIngreso: new Date(),
+                  perecedero: false,
+                },
+              },
+            },
+            { upsert: true }
+          );
+        }
       }
     }
 
@@ -1422,6 +1466,7 @@ app.post('/almacen/registro', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al registrar ingredientes' });
   }
 });
+
 
 
 // Eliminar un ingrediente completo del almacén
