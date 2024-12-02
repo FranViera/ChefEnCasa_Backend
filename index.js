@@ -3034,18 +3034,12 @@ app.get('/sabiasque', async (req, res) => {
       return res.status(404).json({ error: 'No se encontraron datos' });
     }
 
-    // Agrega la URL completa a las imágenes
-    const baseUrl = 'https://chefencasabackend-production.up.railway.app';
-    const datosConImagenes = data.map(item => ({
-      ...item,
-      imagen: `${baseUrl}/${item.imagen}` // Construye la URL completa
-    }));
-
-    res.status(200).json(datosConImagenes);
+    res.status(200).json(data); // Asegúrate de enviar solo rutas relativas
   } catch (error) {
     console.error('Error en /sabiasque:', error.message);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
 
 
