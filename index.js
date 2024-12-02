@@ -3022,11 +3022,16 @@ module.exports = router;
 //========================================SABIAS QUE==============================
 app.get('/sabiasque', async (req, res) => {
   try {
-    const sabiasQueItems = await SabiasQue.find(); // Modelo de la colección
-    res.status(200).json(sabiasQueItems);
+    const data = await obtenerSabiasQue(); // Lógica para obtener los datos
+    if (!data) {
+      return res.status(404).json({ error: 'No se encontraron datos' });
+    }
+    res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener los datos de "¿Sabías que?"', error });
+    console.error('Error en /sabiasque:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
 
 
