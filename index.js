@@ -1582,9 +1582,9 @@ app.put('/almacen/aumentar', authenticateToken, async (req, res) => {
   }
 });
 
-// Modificar la cantidad de un ingrediente en el almacén
+// Modificar la cantidad de un ingrediente en el almacén (perecedero o no perecedero)
 app.put('/almacen/modificar', authenticateToken, async (req, res) => {
-  const { nombreIngrediente, nuevaCantidad } = req.body; // El nombre del ingrediente y la nueva cantidad
+  const { nombreIngrediente, nuevaCantidad, perecedero } = req.body; // Incluye flag para identificar si es perecedero
 
   if (!nombreIngrediente || nuevaCantidad === undefined || nuevaCantidad < 0) {
     return res.status(400).json({ message: 'Debe proporcionar el nombre del ingrediente y una cantidad válida' });
@@ -1594,23 +1594,29 @@ app.put('/almacen/modificar', authenticateToken, async (req, res) => {
     const db = await connectToDatabase();
     const usuarioId = new ObjectId(req.user.id);
 
-    // Buscar el almacén del usuario
-    const almacen = await db.collection('almacen').findOne({ usuarioId });
-    if (!almacen) {
-      return res.status(404).json({ message: 'Almacén no encontrado' });
-    }
+    // Determinar el campo de la colección según el tipo de ingrediente
+    const collectionField = perecedero ? 'ingredientesPerecibles' : 'ingredientes';
+    const cantidadField = perecedero ? 'ingredientesPerecibles.$.cantidad' : 'ingredientes.$.cantidad';
 
-    // Verificar si el ingrediente existe en el almacén
-    const ingrediente = almacen.ingredientes.find(item => item.nombre === nombreIngrediente.toLowerCase());
-    if (!ingrediente) {
+    // Verificar si el ingrediente existe en la colección especificada
+    const almacen = await db.collection('almacen').findOne({
+      usuarioId,
+      [`${collectionField}.nombre`]: nombreIngrediente.toLowerCase(),
+    });
+
+    if (!almacen) {
       return res.status(404).json({ message: `Ingrediente ${nombreIngrediente} no encontrado en el almacén` });
     }
 
     // Actualizar la cantidad del ingrediente
-    await db.collection('almacen').updateOne(
-      { usuarioId, 'ingredientes.nombre': nombreIngrediente.toLowerCase() },
-      { $set: { 'ingredientes.$.cantidad': nuevaCantidad } }
+    const result = await db.collection('almacen').updateOne(
+      { usuarioId, [`${collectionField}.nombre`]: nombreIngrediente.toLowerCase() },
+      { $set: { [cantidadField]: nuevaCantidad } }
     );
+
+    if (result.modifiedCount === 0) {
+      return res.status(400).json({ message: `No se pudo modificar la cantidad del ingrediente ${nombreIngrediente}` });
+    }
 
     res.status(200).json({ message: `Cantidad de ${nombreIngrediente} modificada correctamente` });
   } catch (error) {
@@ -1618,6 +1624,7 @@ app.put('/almacen/modificar', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al modificar la cantidad del ingrediente' });
   }
 });
+
 
 // Verificar ingredientes caducados
 app.get('/almacen/caducados', authenticateToken, async (req, res) => {
