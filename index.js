@@ -1183,10 +1183,11 @@ app.get('/ingredientes', authenticateToken, async (req, res) => {
 });
 
 // Ruta para importar todos los ingredientes desde Spoonacular y guardarlos en la base de datos
+//abcdefghijklmnopqrstuvwxyz
 app.post('/importar-todos-los-ingredientes', authenticateToken, async (req, res) => {
   try {
     const db = await connectToDatabase();
-    const letras = 'abcdefghijklmnopqrstuvwxyz'.split(''); // Array de letras para las consultas
+    const letras = 'pqrstuvwxyz'.split(''); // Array de letras para las consultas
     const number = 100; // Número de ingredientes por solicitud (máximo permitido por Spoonacular)
     let ingredientesImportados = 0;
 
