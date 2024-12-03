@@ -1791,8 +1791,7 @@ function convertirMedida(cantidad, unidad) {
 }
 */
 
-//============================================LISTA DE COMPRAS====================================
-// Generar lista de compras
+
 // ============================================ LISTA DE COMPRAS ====================================
 // Generar lista de compras
 app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
@@ -2025,18 +2024,21 @@ app.put('/lista-de-compras/transferir-al-almacen', authenticateToken, async (req
     const ingredientesComprados = listaDeCompras.ingredientes.filter(ingrediente => ingrediente.comprado);
 
     for (const ingrediente of ingredientesComprados) {
+      // Convertir el nombre del ingrediente a minúsculas
+      const nombreNormalizado = ingrediente.nombre.toLowerCase();
+
       // Buscar la imagen del ingrediente en la colección de ingredientes
-      const ingredienteDb = await db.collection('ingredientes').findOne({ nombreEspanol: ingrediente.nombre });
+      const ingredienteDb = await db.collection('ingredientes').findOne({ nombreEspanol: nombreNormalizado });
 
       const ingredienteEnAlmacen = await db.collection('almacen').findOne({
         usuarioId,
-        'ingredientes.nombre': ingrediente.nombre,
+        'ingredientes.nombre': nombreNormalizado,
       });
 
       if (ingredienteEnAlmacen) {
         // Si ya existe en el almacén, incrementa la cantidad
         await db.collection('almacen').updateOne(
-          { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
+          { usuarioId, 'ingredientes.nombre': nombreNormalizado },
           { $inc: { 'ingredientes.$.cantidad': ingrediente.cantidad } }
         );
       } else {
@@ -2046,7 +2048,7 @@ app.put('/lista-de-compras/transferir-al-almacen', authenticateToken, async (req
           {
             $push: {
               ingredientes: {
-                nombre: ingrediente.nombre,
+                nombre: nombreNormalizado,
                 cantidad: ingrediente.cantidad,
                 img: ingredienteDb ? ingredienteDb.image : ingrediente.img || '', // Usa la imagen de la base de datos o la lista
                 fechaIngreso: new Date(),
@@ -2068,6 +2070,7 @@ app.put('/lista-de-compras/transferir-al-almacen', authenticateToken, async (req
     res.status(500).json({ message: 'Error al transferir los ingredientes al almacén', error: error.message });
   }
 });
+
 
 
 // Ruta para eliminar un ingrediente específico de la lista de compras
