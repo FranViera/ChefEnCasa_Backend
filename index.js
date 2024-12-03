@@ -21,6 +21,7 @@ const { getNoticias } = require('./models/newsService');
 const path = require('path');
 require('dotenv').config();
 const router = express.Router();
+const cron = require('node-cron');
 
 // Cargar las variables de entorno desde el archivo .env
 dotenv.config();
@@ -3095,5 +3096,67 @@ app.get('/sabiasque', async (req, res) => {
   }
 });
 
+//==========================================PREMIUM=========================================
+router.put('/suscripcion/premium', authenticateToken, async (req, res) => {
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
 
+    const hoy = new Date();
+    const fechaFin = new Date(hoy);
+    fechaFin.setDate(hoy.getDate() + 30); // Agregar 30 días al día actual
+
+    // Actualizar el estado premium del usuario
+    const result = await db.collection('usuarios').updateOne(
+      { _id: usuarioId },
+      {
+        $set: {
+          'premium.status': true,
+          'premium.fechaInicio': hoy,
+          'premium.fechaFin': fechaFin,
+        },
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json({
+      message: 'Suscripción premium activada con éxito',
+      premium: {
+        status: true,
+        fechaInicio: hoy,
+        fechaFin: fechaFin,
+      },
+    });
+  } catch (error) {
+    console.error('Error al activar el premium:', error.message);
+    res.status(500).json({ error: 'Error al activar el premium' });
+  }
+});
+
+//CRON PARA VERIFICAR Y CAMBIAR ESTADO DE USUARIOS QUE DEJAN DE SER PREMIUM
+cron.schedule('0 0 * * *', async () => {
+  try {
+    const db = await connectToDatabase();
+    const hoy = new Date();
+
+    // Encontrar y actualizar usuarios cuya suscripción premium ha expirado
+    const result = await db.collection('usuarios').updateMany(
+      { 'premium.status': true, 'premium.fechaFin': { $lt: hoy } },
+      {
+        $set: {
+          'premium.status': false,
+          'premium.fechaInicio': null,
+          'premium.fechaFin': null,
+        },
+      }
+    );
+
+    console.log(`${result.modifiedCount} suscripciones premium han sido desactivadas.`);
+  } catch (error) {
+    console.error('Error al verificar suscripciones premium:', error.message);
+  }
+});
 
