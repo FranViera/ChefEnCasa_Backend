@@ -24,8 +24,26 @@ const UserSchema = {
     default: false,
   },
   premium: {
-    type: Boolean,
-    default: false, // Los usuarios no serán premium por defecto
+    status: {
+      type: Boolean,
+      default: false, // No premium por defecto
+    },
+    fechaInicio: {
+      type: Date,
+      default: null, // Fecha de inicio del premium
+    },
+    fechaFin: {
+      type: Date,
+      default: null, // Fecha de vencimiento del premium
+    },
+  },
+  fechaRegistro: {
+    type: Date,
+    default: new Date(), // Fecha de registro
+  },
+  fechaUltimaSesion: {
+    type: Date,
+    default: null, // Inicialmente null hasta el primer inicio de sesión
   },
 };
 
