@@ -2053,7 +2053,7 @@ app.put('/lista-de-compras/transferir-al-almacen', authenticateToken, async (req
 
     for (const ingrediente of ingredientesComprados) {
       // Buscar la imagen del ingrediente en la colección de ingredientes
-      const ingredienteDb = await db.collection('ingredientes').findOne({ nombreOriginal: ingrediente.nombre });
+      const ingredienteDb = await db.collection('ingredientes').findOne({ nombreEspanol: ingrediente.nombre });
 
       const ingredienteEnAlmacen = await db.collection('almacen').findOne({
         usuarioId,
