@@ -1659,22 +1659,57 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
     const usuarioId = new ObjectId(req.user.id);
     const db = await connectToDatabase();
 
+    const almacen = await db.collection('almacen').findOne({ usuarioId });
+
+    // Validar si el almacén existe y tiene ingredientes
+    if (!almacen) {
+      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
+    }
+
+    const tieneIngredientes =
+      (Array.isArray(almacen.ingredientes) && almacen.ingredientes.length > 0) ||
+      (Array.isArray(almacen.ingredientesPerecibles) && almacen.ingredientesPerecibles.length > 0);
+
+    if (!tieneIngredientes) {
+      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
+    }
+
     // Array para almacenar los ingredientes que se descontaron
     const ingredientesDescontados = [];
 
     for (const ingrediente of ingredientesParaDescontar) {
-      const result = await db.collection('almacen').updateOne(
-        { usuarioId, 'ingredientes.nombre': ingrediente.nombre },
+      // Intentar descontar primero en ingredientes no perecederos
+      let result = await db.collection('almacen').updateOne(
+        { usuarioId, 'ingredientes.nombre': ingrediente.nombre.toLowerCase() },
         { $inc: { 'ingredientes.$.cantidad': -ingrediente.cantidad } }
       );
 
-      // Si se actualizó correctamente el ingrediente, lo agregamos a la lista de descontados
+      // Si no se encuentra en ingredientes no perecederos, intentar en perecibles
+      if (result.modifiedCount === 0) {
+        result = await db.collection('almacen').updateOne(
+          { usuarioId, 'ingredientesPerecibles.nombre': ingrediente.nombre.toLowerCase() },
+          { $inc: { 'ingredientesPerecibles.$.cantidad': -ingrediente.cantidad } }
+        );
+      }
+
+      // Si se actualizó correctamente en alguna colección, agregar a los descontados
       if (result.modifiedCount > 0) {
         ingredientesDescontados.push({
           nombre: ingrediente.nombre,
           cantidad: ingrediente.cantidad,
-          unidad: ingrediente.unidad || 'gramos' // Asegúrate de registrar la unidad
+          unidad: ingrediente.unidad || 'gramos', // Asegúrate de registrar la unidad
         });
+
+        // Eliminar ingrediente si la cantidad llega a 0
+        await db.collection('almacen').updateOne(
+          { usuarioId },
+          {
+            $pull: {
+              ingredientes: { nombre: ingrediente.nombre.toLowerCase(), cantidad: { $lte: 0 } },
+              ingredientesPerecibles: { nombre: ingrediente.nombre.toLowerCase(), cantidad: { $lte: 0 } },
+            },
+          }
+        );
       }
     }
 
@@ -1683,7 +1718,7 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
       await db.collection('ingredientesUtilizados').insertOne({
         usuarioId,
         ingredientes: ingredientesDescontados,
-        fechaUso: new Date() // Fecha actual
+        fechaUso: new Date(), // Fecha actual
       });
     }
 
@@ -1693,6 +1728,7 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al descontar ingredientes' });
   }
 });
+
 
 // Registrar receta preparada
 app.post('/recetas-preparadas', authenticateToken, async (req, res) => {
@@ -1805,7 +1841,16 @@ app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
     if (!almacen) {
-      return res.status(404).json({ message: 'Almacén no encontrado' });
+      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
+    }
+
+    // Verificar si el almacén tiene al menos una de las colecciones de ingredientes
+    const tieneIngredientes =
+      (Array.isArray(almacen.ingredientes) && almacen.ingredientes.length > 0) ||
+      (Array.isArray(almacen.ingredientesPerecibles) && almacen.ingredientesPerecibles.length > 0);
+
+    if (!tieneIngredientes) {
+      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
     }
 
     const faltanIngredientes = [];
@@ -1817,7 +1862,17 @@ app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
         return res.status(500).json({ error: `Error al convertir la cantidad de ${ingredienteReceta.name}` });
       }
 
-      const ingredienteEnAlmacen = almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name);
+      // Buscar en ingredientes no perecederos
+      const ingredienteEnNoPerecibles =
+        Array.isArray(almacen.ingredientes) &&
+        almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name.toLowerCase());
+
+      // Buscar en ingredientes perecibles
+      const ingredienteEnPerecibles =
+        Array.isArray(almacen.ingredientesPerecibles) &&
+        almacen.ingredientesPerecibles.find(item => item.nombre === ingredienteReceta.name.toLowerCase());
+
+      const ingredienteEnAlmacen = ingredienteEnNoPerecibles || ingredienteEnPerecibles;
 
       if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadEnGramos) {
         faltanIngredientes.push({
@@ -1875,6 +1930,7 @@ function convertirMedida(cantidad, unidad) {
 
   return cantidad * conversionFactor;
 }
+
 
 
 // VER LISTA DE COMPRAS
