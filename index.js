@@ -3050,15 +3050,19 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'No se encontraron datos de TMB para este usuario' });
     }
 
-    const tmb = usuario.healthData.tmb; // Obtiene el TMB del usuario
+    const tmb = usuario.healthData.tmb; // TMB diario del usuario
+    const { startDate, endDate } = req.query; // Fechas enviadas como parámetros
 
-    // Consultar recetas preparadas en la última semana
-    const haceUnaSemana = new Date();
-    haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
+    // Si no se envían fechas, calcular la última semana
+    const fechaInicio = startDate ? new Date(startDate) : new Date();
+    if (!startDate) fechaInicio.setDate(fechaInicio.getDate() - 7);
 
+    const fechaFin = endDate ? new Date(endDate) : new Date();
+
+    // Consultar recetas preparadas en el rango de fechas
     const recetasPreparadas = await db.collection('recetasPreparadas').find({
       usuarioId: usuarioId,
-      fechaPreparacion: { $gte: haceUnaSemana },
+      fechaPreparacion: { $gte: fechaInicio, $lte: fechaFin },
     }).toArray();
 
     const totalKcal = recetasPreparadas.reduce((sum, r) => sum + parseInt(r.nutrition?.calories || 0), 0);
@@ -3067,27 +3071,27 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
     const totalFat = recetasPreparadas.reduce((sum, r) => sum + parseInt(r.nutrition?.fat?.replace('g', '') || 0), 0);
 
     const consumoDiario = recetasPreparadas.reduce((acc, receta) => {
-    const dia = new Date(receta.fechaPreparacion).toLocaleDateString('es-ES', { weekday: 'short' });
-  
-    if (!acc[dia]) {
-      acc[dia] = { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 };
-    }
-  
-    acc[dia].calorias += parseInt(receta.nutrition?.calories || 0);
-    acc[dia].proteinas += parseInt(receta.nutrition?.protein?.replace('g', '') || 0);
-    acc[dia].carbohidratos += parseInt(receta.nutrition?.carbs?.replace('g', '') || 0);
-    acc[dia].grasas += parseInt(receta.nutrition?.fat?.replace('g', '') || 0);
-  
-    return acc;
-  }, {});
+      const dia = new Date(receta.fechaPreparacion).toLocaleDateString('es-ES', { weekday: 'short' });
+
+      if (!acc[dia]) {
+        acc[dia] = { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 };
+      }
+
+      acc[dia].calorias += parseInt(receta.nutrition?.calories || 0);
+      acc[dia].proteinas += parseInt(receta.nutrition?.protein?.replace('g', '') || 0);
+      acc[dia].carbohidratos += parseInt(receta.nutrition?.carbs?.replace('g', '') || 0);
+      acc[dia].grasas += parseInt(receta.nutrition?.fat?.replace('g', '') || 0);
+
+      return acc;
+    }, {});
 
     res.status(200).json({
       totalKcal,
       totalCarbs,
       totalProtein,
       totalFat,
-      consumoDiario, // Incluye todos los nutrientes por día
-      tmb,
+      consumoDiario,
+      tmb, // TMB diario para calcular el porcentaje
     });
   } catch (error) {
     console.error('Error al obtener la meta semanal:', error);
