@@ -2653,51 +2653,35 @@ app.get('/perfil/health', authenticateToken, async (req, res) => {
 
 // Ruta para actualizar el perfil de salud del usuario (solo para usuarios premium)
 app.put('/perfil/health', authenticateToken, async (req, res) => {
-  const { weight, height } = req.body;
+  const { weight, height, imc, dietRecommendation, caloricNeeds, tmb, age, gender, activityLevel } = req.body;
 
-  // Validar que los datos requeridos están presentes
   if (!weight || !height) {
     return res.status(400).json({ message: 'Debe proporcionar peso y altura para calcular el IMC.' });
   }
 
   try {
-    // Obtener el usuario actual
     const usuario = await usersCollection.findOne({ _id: new ObjectId(req.user.id) });
 
-    // Verificar si el usuario es premium
-    if (!usuario || !usuario.premium) {
-      return res.status(403).json({ message: 'Esta funcionalidad es exclusiva para usuarios premium.' });
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
     }
 
-    // Calcular el IMC
-    const imc = (weight / ((height / 100) ** 2)).toFixed(2);
+    const healthData = {
+      weight,
+      height,
+      imc: imc ? parseFloat(imc) : usuario.healthData?.imc || null,
+      dietRecommendation: dietRecommendation || usuario.healthData?.dietRecommendation || null,
+      caloricNeeds: caloricNeeds ? parseInt(caloricNeeds) : usuario.healthData?.caloricNeeds || null,
+      tmb: tmb ? parseFloat(tmb) : usuario.healthData?.tmb || null,
+      age: age || usuario.healthData?.age || null,
+      gender: gender || usuario.healthData?.gender || null,
+      activityLevel: activityLevel || usuario.healthData?.activityLevel || null,
+    };
 
-    // Generar la recomendación dietética basada en el IMC
-    let dietRecommendation = '';
-    if (imc < 18.5) {
-      dietRecommendation = 'Dieta alta en calorías';
-    } else if (imc >= 18.5 && imc < 24.9) {
-      dietRecommendation = 'Dieta balanceada';
-    } else if (imc >= 25 && imc < 29.9) {
-      dietRecommendation = 'Dieta baja en calorías';
-    } else {
-      dietRecommendation = 'Dieta para reducción de peso';
-    }
-
-    // Actualizar el perfil de salud del usuario en la base de datos
     const result = await usersCollection.updateOne(
       { _id: new ObjectId(req.user.id) },
-      {
-        $set: {
-          healthData: {
-            weight,
-            height,
-            imc: parseFloat(imc),
-            dietRecommendation,
-          },
-        },
-      },
-      { upsert: true } // Crear healthData si no existe
+      { $set: { healthData } },
+      { upsert: true }
     );
 
     if (result.modifiedCount === 0) {
@@ -2706,18 +2690,14 @@ app.put('/perfil/health', authenticateToken, async (req, res) => {
 
     res.status(200).json({
       message: 'Perfil de salud actualizado exitosamente.',
-      healthData: {
-        weight,
-        height,
-        imc,
-        dietRecommendation,
-      },
+      healthData,
     });
   } catch (error) {
     console.error('Error al actualizar el perfil de salud:', error.message);
     res.status(500).json({ message: 'Error al actualizar el perfil de salud.', error: error.message });
   }
 });
+
 
 // Ruta para obtener y guardar las calorías recomendadas en el perfil de salud
 app.post('/perfil/calorias', authenticateToken, async (req, res) => {
