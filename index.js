@@ -1790,6 +1790,8 @@ function convertirMedida(cantidad, unidad) {
 
 //============================================LISTA DE COMPRAS====================================
 // Generar lista de compras
+// ============================================ LISTA DE COMPRAS ====================================
+// Generar lista de compras
 app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
   const { recipeId } = req.body;
 
@@ -1802,6 +1804,7 @@ app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
 
     const usuarioId = new ObjectId(req.user.id);
     const almacen = await db.collection('almacen').findOne({ usuarioId });
+
     if (!almacen) {
       return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
     }
@@ -1812,7 +1815,7 @@ app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
       (Array.isArray(almacen.ingredientesPerecibles) && almacen.ingredientesPerecibles.length > 0);
 
     if (!tieneIngredientes) {
-      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
+      return res.status(404).json({ message: 'No hay ingredientes en el almacén.' });
     }
 
     const faltanIngredientes = [];
@@ -1820,30 +1823,34 @@ app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
 
     for (const ingredienteReceta of receta.ingredients) {
       const cantidadEnGramos = convertirMedida(ingredienteReceta.amount, ingredienteReceta.unit);
+
       if (!cantidadEnGramos || isNaN(cantidadEnGramos)) {
-        return res.status(500).json({ error: `Error al convertir la cantidad de ${ingredienteReceta.name}` });
+        console.error(`Error al convertir la cantidad de ${ingredienteReceta.name}`);
+        continue;
       }
+
+      const nombreIngrediente = ingredienteReceta.name.toLowerCase().trim();
 
       // Buscar en ingredientes no perecederos
       const ingredienteEnNoPerecibles =
         Array.isArray(almacen.ingredientes) &&
-        almacen.ingredientes.find(item => item.nombre === ingredienteReceta.name.toLowerCase());
+        almacen.ingredientes.find((item) => item.nombre === nombreIngrediente);
 
       // Buscar en ingredientes perecibles
       const ingredienteEnPerecibles =
         Array.isArray(almacen.ingredientesPerecibles) &&
-        almacen.ingredientesPerecibles.find(item => item.nombre === ingredienteReceta.name.toLowerCase());
+        almacen.ingredientesPerecibles.find((item) => item.nombre === nombreIngrediente);
 
       const ingredienteEnAlmacen = ingredienteEnNoPerecibles || ingredienteEnPerecibles;
 
       if (!ingredienteEnAlmacen || ingredienteEnAlmacen.cantidad < cantidadEnGramos) {
         faltanIngredientes.push({
           nombre: ingredienteReceta.name,
-          cantidad: cantidadEnGramos,
+          cantidad: cantidadEnGramos - (ingredienteEnAlmacen?.cantidad || 0),
         });
       } else {
         ingredientesParaDescontar.push({
-          nombre: ingredienteReceta.name,
+          nombre: nombreIngrediente,
           cantidad: cantidadEnGramos,
         });
       }
@@ -1872,6 +1879,7 @@ app.post('/verificar-ingredientes', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al verificar ingredientes' });
   }
 });
+
 
 // Función para convertir la cantidad y unidad a gramos o mililitros
 function convertirMedida(cantidad, unidad) {
