@@ -1613,7 +1613,7 @@ app.get('/almacen/caducados', authenticateToken, async (req, res) => {
 
 
 // ============================================ PREPARAR RECETA ====================================
-// Descontar ingredientes del almacén al preparar receta y registrar en ingredientesUtilizados
+// Descontar ingredientes del almacén al preparar receta y registrar en ingredientes utilizados
 app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
   const { ingredientesParaDescontar } = req.body;
 
@@ -1623,43 +1623,34 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
 
     const almacen = await db.collection('almacen').findOne({ usuarioId });
 
-    // Validar si el almacén existe y tiene ingredientes
     if (!almacen) {
-      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
+      return res.status(404).json({ message: 'No hay ingredientes en el almacén.' });
     }
 
-    const tieneIngredientes =
-      (Array.isArray(almacen.ingredientes) && almacen.ingredientes.length > 0) ||
-      (Array.isArray(almacen.ingredientesPerecibles) && almacen.ingredientesPerecibles.length > 0);
-
-    if (!tieneIngredientes) {
-      return res.status(404).json({ message: 'Debes ingresar ingredientes en tu almacén primero.' });
-    }
-
-    // Array para almacenar los ingredientes que se descontaron
     const ingredientesDescontados = [];
+    const erroresDescuento = [];
 
     for (const ingrediente of ingredientesParaDescontar) {
+      const nombreIngrediente = ingrediente.nombre.toLowerCase().trim();
+
       // Intentar descontar primero en ingredientes no perecederos
       let result = await db.collection('almacen').updateOne(
-        { usuarioId, 'ingredientes.nombre': ingrediente.nombre.toLowerCase() },
+        { usuarioId, 'ingredientes.nombre': nombreIngrediente },
         { $inc: { 'ingredientes.$.cantidad': -ingrediente.cantidad } }
       );
 
-      // Si no se encuentra en ingredientes no perecederos, intentar en perecibles
+      // Si no se encuentra en no perecederos, intentar en perecibles
       if (result.modifiedCount === 0) {
         result = await db.collection('almacen').updateOne(
-          { usuarioId, 'ingredientesPerecibles.nombre': ingrediente.nombre.toLowerCase() },
+          { usuarioId, 'ingredientesPerecibles.nombre': nombreIngrediente },
           { $inc: { 'ingredientesPerecibles.$.cantidad': -ingrediente.cantidad } }
         );
       }
 
-      // Si se actualizó correctamente en alguna colección, agregar a los descontados
       if (result.modifiedCount > 0) {
         ingredientesDescontados.push({
           nombre: ingrediente.nombre,
           cantidad: ingrediente.cantidad,
-          unidad: ingrediente.unidad || 'gramos', // Asegúrate de registrar la unidad
         });
 
         // Eliminar ingrediente si la cantidad llega a 0
@@ -1667,11 +1658,16 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
           { usuarioId },
           {
             $pull: {
-              ingredientes: { nombre: ingrediente.nombre.toLowerCase(), cantidad: { $lte: 0 } },
-              ingredientesPerecibles: { nombre: ingrediente.nombre.toLowerCase(), cantidad: { $lte: 0 } },
+              ingredientes: { nombre: nombreIngrediente, cantidad: { $lte: 0 } },
+              ingredientesPerecibles: { nombre: nombreIngrediente, cantidad: { $lte: 0 } },
             },
           }
         );
+      } else {
+        erroresDescuento.push({
+          nombre: ingrediente.nombre,
+          cantidad: ingrediente.cantidad,
+        });
       }
     }
 
@@ -1680,11 +1676,17 @@ app.post('/descontar-ingredientes', authenticateToken, async (req, res) => {
       await db.collection('ingredientesUtilizados').insertOne({
         usuarioId,
         ingredientes: ingredientesDescontados,
-        fechaUso: new Date(), // Fecha actual
+        fechaUso: new Date(),
       });
     }
 
-    res.status(200).json({ message: 'Ingredientes descontados correctamente y registrados en ingredientes utilizados.' });
+    res.status(200).json({
+      message: erroresDescuento.length > 0
+        ? 'Algunos ingredientes no pudieron descontarse completamente.'
+        : 'Ingredientes descontados correctamente.',
+      erroresDescuento,
+      ingredientesDescontados,
+    });
   } catch (error) {
     console.error('Error al descontar ingredientes:', error.message);
     res.status(500).json({ error: 'Error al descontar ingredientes' });
