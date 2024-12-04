@@ -1041,13 +1041,14 @@ app.get('/receta/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Receta no encontrada en la base de datos' });
     }
 
-    // Convertir las cantidades de los ingredientes
+    // Convertir las cantidades y normalizar los nombres de los ingredientes
     const ingredientesConvertidos = receta.ingredients.map((ingrediente) => {
       const cantidadConvertida = convertirMedida(ingrediente.amount, ingrediente.unit, ingrediente.name);
       return {
         ...ingrediente,
+        name: ingrediente.name.toLowerCase().trim(), // Normalizar a minúsculas
         amount: cantidadConvertida,
-        unit: 'gram'  // O la unidad en la que desees mostrarlo, como gramos
+        unit: 'gram', // O la unidad en la que desees mostrarlo
       };
     });
 
@@ -1060,6 +1061,7 @@ app.get('/receta/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al obtener detalles de la receta' });
   }
 });
+
 
 //============================================INFO RECETA PREMIUM=============================================
 
@@ -1090,11 +1092,12 @@ app.get('/recetaPremium/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Receta premium no encontrada en la base de datos' });
     }
 
-    // Convertir las cantidades de los ingredientes
+    // Convertir las cantidades y normalizar los nombres de los ingredientes
     const ingredientesConvertidos = receta.ingredients.map((ingrediente) => {
       const cantidadConvertida = convertirMedida(ingrediente.amount, ingrediente.unit, ingrediente.name);
       return {
         ...ingrediente,
+        name: ingrediente.name.toLowerCase().trim(), // Normalizar a minúsculas
         amount: cantidadConvertida,
         unit: 'gram', // Convertir las unidades a gramos o a la unidad estándar deseada
       };
@@ -1110,6 +1113,7 @@ app.get('/recetaPremium/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error al obtener detalles de la receta premium' });
   }
 });
+
 
 
 
