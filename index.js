@@ -3079,6 +3079,48 @@ router.get('/meta-semanal', authenticateToken, async (req, res) => {
 
 module.exports = router;
 
+//CALORIAS
+// Ruta optimizada para obtener las calorías diarias
+router.get('/calorias-diarias', authenticateToken, async (req, res) => {
+  console.log('Ruta /calorias-diarias fue llamada');
+  try {
+    const db = await connectToDatabase();
+    const usuarioId = new ObjectId(req.user.id);
+
+    // Obtener los datos del usuario para incluir el TMB
+    const usuario = await db.collection('usuarios').findOne({ _id: usuarioId });
+
+    if (!usuario || !usuario.healthData || !usuario.healthData.tmb) {
+      return res.status(400).json({ error: 'No se encontraron datos de TMB para este usuario' });
+    }
+
+    const tmb = usuario.healthData.tmb; // TMB diario del usuario
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Establecer la hora al inicio del día
+    const manana = new Date(hoy);
+    manana.setDate(hoy.getDate() + 1);
+
+    // Consultar recetas preparadas solo para hoy
+    const recetasPreparadasHoy = await db.collection('recetasPreparadas').find({
+      usuarioId: usuarioId,
+      fechaPreparacion: { $gte: hoy, $lt: manana },
+    }).toArray();
+
+    const totalKcalHoy = recetasPreparadasHoy.reduce((sum, r) => sum + parseInt(r.nutrition?.calories || 0), 0);
+
+    res.status(200).json({
+      totalKcal: totalKcalHoy,
+      tmb, // TMB diario para calcular el porcentaje
+    });
+  } catch (error) {
+    console.error('Error al obtener las calorías diarias:', error);
+    res.status(500).json({ error: 'Error al obtener las calorías diarias' });
+  }
+});
+
+module.exports = router;
+
+
 // ======================================== ENDPOINT SABIAS QUE ========================================
 async function obtenerSabiasQue() {
   const db = await connectToDatabase();
