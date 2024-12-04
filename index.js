@@ -1304,7 +1304,8 @@ const conversiones = {
   'small head': 100,  
   'large head': 200,  
   'medium head': 150, 
-  'fillet': 200,      
+  'fillet': 200,
+  'pound': 450,
   // añadir otras unidades según sea necesario
 };
 
