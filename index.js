@@ -2689,19 +2689,18 @@ app.put('/perfil/health', authenticateToken, async (req, res) => {
 
     // Actualizar el perfil de salud del usuario en la base de datos
     const result = await usersCollection.updateOne(
-      { _id: new ObjectId(req.user.id) },
-      {
-        $set: {
-          healthData: {
-            weight,
-            height,
-            imc: parseFloat(imc),
-            dietRecommendation,
+        { _id: new ObjectId(req.user.id) },
+        {
+          $set: {
+            'healthData.caloricNeeds': parseInt(caloricNeeds),
+            'healthData.tmb': parseFloat(tmb),
+            'healthData.age': age,
+            'healthData.gender': gender,
+            'healthData.activityLevel': activityLevel,
           },
         },
-      },
-      { upsert: true } // Crear healthData si no existe
-    );
+        { upsert: true }
+      );
 
     if (result.modifiedCount === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado o sin cambios.' });
