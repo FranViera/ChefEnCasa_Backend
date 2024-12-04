@@ -695,7 +695,13 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
       return res.status(200).json({ message: 'No hay ingredientes en el almacén', recomendaciones: [] });
     }
 
-    // Consultar la base de datos de recetas y filtrar según los ingredientes
+    // Normalizar nombres de los ingredientes en el almacén a minúsculas
+    const ingredientesAlmacenNormalizados = almacen.ingredientes.map((ingrediente) => ({
+      ...ingrediente,
+      nombre: ingrediente.nombre.toLowerCase().trim(),
+    }));
+
+    // Consultar la base de datos de recetas
     const recomendaciones = await db.collection('recetas').find().toArray();
 
     // Filtrar recetas basadas en coincidencia de ingredientes y cantidades
@@ -710,15 +716,18 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
       let cantidadesSuficientes = 0;
 
       receta.ingredients.forEach((ingrediente) => {
+        const nombreIngredienteReceta = ingrediente.name.toLowerCase().trim();
         const cantidadRecetaEnGramos = convertirMedida(ingrediente.amount, ingrediente.unit);
 
         if (!cantidadRecetaEnGramos || isNaN(cantidadRecetaEnGramos)) {
-          console.error(`Error al convertir la cantidad de ${ingrediente.name}`);
+          console.error(`Error al convertir la cantidad de ${nombreIngredienteReceta}`);
           return;
         }
 
-        // Buscar el ingrediente en el almacén del usuario
-        const ingredienteEnAlmacen = almacen.ingredientes.find(i => i.nombre === ingrediente.name);
+        // Buscar el ingrediente normalizado en el almacén del usuario
+        const ingredienteEnAlmacen = ingredientesAlmacenNormalizados.find(
+          (i) => i.nombre === nombreIngredienteReceta
+        );
 
         if (ingredienteEnAlmacen) {
           // Si el ingrediente está en el almacén, incrementar las coincidencias
@@ -738,13 +747,13 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
           } else {
             // Si la cantidad en el almacén es menor, agregar a faltantes
             faltantes.push({
-              nombre: ingrediente.name,
+              nombre: nombreIngredienteReceta,
               faltante: cantidadRecetaEnGramos - cantidadAlmacenEnGramos,
             });
           }
         } else {
           // Si el ingrediente no está en el almacén, agregarlo directamente a faltantes
-          faltantes.push({ nombre: ingrediente.name, faltante: cantidadRecetaEnGramos });
+          faltantes.push({ nombre: nombreIngredienteReceta, faltante: cantidadRecetaEnGramos });
         }
       });
 
@@ -757,20 +766,20 @@ app.get('/api/recomendaciones', authenticateToken, async (req, res) => {
 
       // Considerar receta recomendada si cumple con al menos el 70% en el porcentaje combinado
       if (porcentajeCoincidencia >= 70) {
-        return { 
-          ...receta, 
+        return {
+          ...receta,
           faltantes,
-          porcentajeCoincidencia
+          porcentajeCoincidencia,
         };
       }
-      
+
       return null;
     }).filter(Boolean); // Filtrar recetas que no cumplen con el 70%
 
     // Debug para verificar ingredientes faltantes
-    console.log("Ingredientes faltantes para cada receta recomendada:", recetasRecomendadas.map(r => ({ 
-      titulo: r.title, 
-      faltantes: r.faltantes 
+    console.log("Ingredientes faltantes para cada receta recomendada:", recetasRecomendadas.map((r) => ({
+      titulo: r.title,
+      faltantes: r.faltantes,
     })));
 
     res.json({ recomendaciones: recetasRecomendadas });
