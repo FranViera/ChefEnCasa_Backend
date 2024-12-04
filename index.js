@@ -1306,6 +1306,9 @@ const conversiones = {
   'medium head': 150, 
   'fillet': 200,
   'pound': 450,
+  'medium piece': 250,
+  'bunche': 200,
+  'tb': 5,
   // añadir otras unidades según sea necesario
 };
 
