@@ -1258,58 +1258,57 @@ const conversiones = {
   'tbsp': 15,         
   'tsp': 5,           
   'cup': 240,         
-  'oz': 25,           
-  'lb': 450,          
+  'oz': 28.35,        // Corregido: 1 oz = 28.35 gramos
+  'lb': 453.59,       // Corregido: 1 lb = 453.59 gramos
   'pinche': 0.36,     
   'clove': 5,         
   'head': 1000,       
-  'ounce': 25,        
-  'serving': 0.5,     
+  'ounce': 28.35,     // Corregido: igual que 'oz'
+  'serving': 250,     // Corregido: valor promedio por porción
   'strip': 5,         
-  'large': 100,       
+  'large': 200,       // Corregido: depende del ingrediente, valor ajustado
   'unidad': 100,      
   'c': 240,           
   't': 50,            
-  'small': 100,       
+  'small': 50,        // Corregido: reducido según el promedio
   'tablespoon': 15,   
   'teaspoon': 5,      
-  'can': 300,         
-  'slice': 5,         
+  'can': 400,         // Corregido: valor más común para latas
+  'slice': 25,        // Corregido: depende del grosor, valor promedio
   'pinch': 0.5,       
   'container': 500,   
   'dash': 0.5,        
-  'bunch': 100,       
-  'bottle': 250,      
-  'jar': 200,         
-  'bowl': 300,        
-  'pint': 470,        
+  'bunch': 200,       // Corregido: ajustado para un manojo promedio
+  'bottle': 500,      // Corregido: valor más estándar
+  'jar': 400,         // Corregido: tamaño típico de un frasco
+  'bowl': 500,        // Corregido: valor promedio para un bol
+  'pint': 473,        // Corregido: 1 pint = 473 ml
   'quart': 946,       
   'gallon': 3785,     
   'Tb': 15,           
   'handful': 50,      
-  'medium size': 100, 
-  'medium': 100,      
-  'large size': 200,  
-  'leaf': 10,
+  'medium size': 150, // Corregido: ajustado según el promedio
+  'medium': 150,      // Corregido: igual que 'medium size'
+  'large size': 250,  // Corregido: mayor tamaño promedio
+  'leaf': 5,          // Corregido: depende del tipo de hoja
   'large handful': 75,
-  'piece': 50,
-  'large can': 600,
-  'bag': 100,         
-  'box': 100,         
+  'piece': 100,       // Corregido: depende del ingrediente, ajustado al promedio
+  'large can': 800,   // Corregido: tamaño común de latas grandes
+  'bag': 500,         // Corregido: tamaño promedio de una bolsa
+  'box': 500,         // Corregido: ajustado para cajas
   'stalk': 100,       
   'stick': 50,        
-  'dash': 0.5,        
-  '8-inch': 100,      
+  '8-inch': 250,      // Corregido: depende del alimento, ajustado al promedio
   'inch': 15,         
-  'small head': 100,  
-  'large head': 200,  
-  'medium head': 150, 
+  'small head': 500,  // Corregido: ajustado para una cabeza pequeña
+  'large head': 1000, 
+  'medium head': 750, // Corregido: tamaño promedio ajustado
   'fillet': 200,
-  'pound': 450,
+  'pound': 453.59,    // Corregido: igual que 'lb'
   'medium piece': 250,
   'bunche': 200,
-  'tb': 5,
-  // añadir otras unidades según sea necesario
+  'tb': 15,
+  //Agregar segun sea necesario
 };
 
 const unidadesDesconocidas = new Set();
