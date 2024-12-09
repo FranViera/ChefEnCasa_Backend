@@ -1291,7 +1291,7 @@ const conversiones = {
   'pinch': 0.5,       
   'container': 500,   
   'dash': 0.5,        
-  'bunch': 200,       // Corregido: ajustado para un manojo promedio
+  'bunch': 10,       // Corregido: ajustado para un manojo promedio
   'bottle': 500,      // Corregido: valor más estándar
   'jar': 400,         // Corregido: tamaño típico de un frasco
   'bowl': 500,        // Corregido: valor promedio para un bol
@@ -1309,7 +1309,7 @@ const conversiones = {
   'large can': 800,   // Corregido: tamaño común de latas grandes
   'bag': 500,         // Corregido: tamaño promedio de una bolsa
   'box': 500,         // Corregido: ajustado para cajas
-  'stalk': 100,       
+  'stalk': 50,       
   'stick': 50,        
   '8-inch': 250,      // Corregido: depende del alimento, ajustado al promedio
   'inch': 15,         
