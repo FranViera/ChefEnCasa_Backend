@@ -1271,13 +1271,13 @@ const conversiones = {
   'tbsp': 15,         
   'tsp': 5,           
   'cup': 240,         
-  'oz': 28.35,        // Corregido: 1 oz = 28.35 gramos
-  'lb': 453.59,       // Corregido: 1 lb = 453.59 gramos
-  'pinche': 0.36,     
+  'oz': 28,        // Corregido: 1 oz = 28.35 gramos
+  'lb': 450,       // Corregido: 1 lb = 453.59 gramos
+  'pinche': 0.35,     
   'clove': 5,         
-  'head': 1000,       
-  'ounce': 28.35,     // Corregido: igual que 'oz'
-  'serving': 250,     // Corregido: valor promedio por porción
+  'head': 100,       
+  'ounce': 28,     // Corregido: igual que 'oz'
+  'serving': 100,     // Corregido: valor promedio por porción
   'strip': 5,         
   'large': 200,       // Corregido: depende del ingrediente, valor ajustado
   'unidad': 100,      
@@ -1313,13 +1313,13 @@ const conversiones = {
   'stick': 50,        
   '8-inch': 250,      // Corregido: depende del alimento, ajustado al promedio
   'inch': 15,         
-  'small head': 500,  // Corregido: ajustado para una cabeza pequeña
-  'large head': 1000, 
-  'medium head': 750, // Corregido: tamaño promedio ajustado
+  'small head': 50,  // Corregido: ajustado para una cabeza pequeña
+  'large head': 150, 
+  'medium head': 100, // Corregido: tamaño promedio ajustado
   'fillet': 200,
-  'pound': 453.59,    // Corregido: igual que 'lb'
-  'medium piece': 250,
-  'bunche': 200,
+  'pound': 450,    
+  'medium piece': 200,
+  'bunche': 100,
   'tb': 15,
   //Agregar segun sea necesario
 };
