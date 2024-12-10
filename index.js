@@ -259,17 +259,21 @@ app.post('/register', async (req, res) => {
   allergies: allergies || [],
   role: role || 'user',
   policiesAccepted: true,
-  premium: premium || false, // Si no se especifica, el usuario no es premium por defecto
-  healthData: premium
-    ? { 
-        weight: null, 
-        height: null, 
-        imc: null, 
-        dietRecommendation: null, 
-        caloricNeeds: null, 
-        tmb: null 
-      }
-    : null, // HealthData depende de si es premium
+  premium: {
+    status: premium || false,
+    fechaInicio: premium ? new Date() : null,
+    fechaFin: premium ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null, // Ejemplo: un mes de premium
+  },
+  healthData: {
+    weight: null,
+    height: null,
+    imc: null,
+    dietRecommendation: null,
+    caloricNeeds: null,
+    tmb: null,
+  },
+  fechaRegistro: new Date(),
+  fechaUltimaSesion: null,
 };
 
 
