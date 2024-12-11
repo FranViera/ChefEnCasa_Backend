@@ -3246,6 +3246,7 @@ cron.schedule('0 0 * * *', async () => {
 
 //===========================================PUNTOS Y CAJEE DE CUPONES=======================================
 router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
+  console.log('Ruta alcanzada:', req.params.id, req.body.userId);
   const { id } = req.params;
   const { userId } = req.body;
 
