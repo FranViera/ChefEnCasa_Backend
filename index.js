@@ -3251,8 +3251,7 @@ router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
   const { userId } = req.body;
 
   try {
-    await client.connect();
-    const db = client.db('chefencasa');
+    const db = await connectToDatabase();
     const cuponModel = new Cupon(db);
     const usersCollection = db.collection('usuarios');
     const cuponesCanjeadosCollection = db.collection('cuponesCanjeadosVencidos');
