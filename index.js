@@ -3314,7 +3314,7 @@ router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
     console.error('Error al canjear cupón:', error);
     res.status(500).json({ message: 'Error al canjear cupón' });
   } finally {
-    await client.close();
+    console.log('Finalizando operación de canje.');
   }
 });
 
