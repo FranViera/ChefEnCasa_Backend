@@ -8,16 +8,24 @@ const UserSchema = {
   email: String,
   password: String,
   telefono: {
-    prefijo: String, // Prefijo del país
-    numero: String, // Número de teléfono
+    prefijo: String,
+    numero: String,
+  },
+  points: {
+    type: Number,
+    default: 0, // Inicialmente 0 puntos
+  },
+  fechaUltimaActualizacionPuntos: {
+    type: Date,
+    default: new Date(), // Control de la última vez que se sumaron puntos
   },
   healthData: {
     weight: Number,
     height: Number,
     imc: Number,
     dietRecommendation: String,
-    caloricNeeds: Number, // Calorías diarias recomendadas
-    tmb: Number,          // Tasa Metabólica Basal
+    caloricNeeds: Number,
+    tmb: Number,
   },
   policiesAccepted: {
     type: Boolean,
@@ -26,26 +34,21 @@ const UserSchema = {
   premium: {
     status: {
       type: Boolean,
-      default: false, // No premium por defecto
+      default: false,
     },
-    fechaInicio: {
-      type: Date,
-      default: null, // Fecha de inicio del premium
-    },
-    fechaFin: {
-      type: Date,
-      default: null, // Fecha de vencimiento del premium
-    },
+    fechaInicio: Date,
+    fechaFin: Date,
   },
   fechaRegistro: {
     type: Date,
-    default: new Date(), // Fecha de registro
+    default: new Date(),
   },
   fechaUltimaSesion: {
     type: Date,
-    default: null, // Inicialmente null hasta el primer inicio de sesión
+    default: null,
   },
 };
+
 
 // Función para hashear la contraseña
 async function hashPassword(password) {
