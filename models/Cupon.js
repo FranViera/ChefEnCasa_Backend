@@ -7,15 +7,14 @@ class Cupon {
 
   // Método para crear un nuevo cupón
   async create(cuponData) {
-    try {
-      const result = await this.collection.insertOne(cuponData);
-      // Devuelve el documento insertado directamente
-      return result.ops ? result.ops[0] : result;  // Si 'ops' no existe, devolvemos el resultado completo.
-    } catch (error) {
-      console.error('Error al crear cupón:', error);
-      throw error;
-    }
+  try {
+    const result = await this.collection.insertOne(cuponData);
+    return { _id: result.insertedId, ...cuponData }; // Devuelve el documento insertado con el ID
+  } catch (error) {
+    console.error('Error al crear cupón:', error);
+    throw error;
   }
+}
 
   // Método para obtener todos los cupones
   async findAll() {
