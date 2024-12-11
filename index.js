@@ -298,13 +298,14 @@ app.post('/register', async (req, res) => {
 
 
   // Ruta de login de usuarios
-  app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
 
-    if (!email || !password) { // Verificar si se envían todos los campos
-      return res.status(400).json({ message: 'Todos los campos son obligatorios' });
-    }
+  if (!email || !password) { // Verificar si se envían todos los campos
+    return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+  }
 
+  try {
     // Buscar el usuario en la base de datos
     const usuario = await usersCollection.findOne({ email });
     if (!usuario) {
@@ -318,16 +319,25 @@ app.post('/register', async (req, res) => {
     }
 
     // Generar el token JWT
-    /*const token = jwt.sign({ id: usuario._id, email: usuario.email, role: usuario.role }, JWT_SECRET, { expiresIn: '1h' });*/
     const token = jwt.sign(
       { id: usuario._id, email: usuario.email, role: usuario.role },
       JWT_SECRET,
       { expiresIn: '30d' } // Token válido por 30 días
     );
 
+    // Actualizar la fecha de última sesión en la base de datos
+    await usersCollection.updateOne(
+      { email },
+      { $set: { fechaUltimaSesion: new Date() } }
+    );
+
     // Enviar el token de respuesta
     res.status(200).json({ message: 'Login exitoso', token });
-  });
+  } catch (error) {
+    console.error('Error en login:', error.message);
+    res.status(500).json({ message: 'Error en login', error: error.message });
+  }
+});
 
   // Ruta protegida para acceder al perfil de usuario solo con token válido
   app.get('/perfil', authenticateToken, async (req, res) => {
