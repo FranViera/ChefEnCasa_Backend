@@ -3273,14 +3273,14 @@ router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    if (usuario.puntos < cupon.puntos_necesarios) {
+    if (usuario.points < cupon.puntos_necesarios) {
       return res.status(400).json({ message: 'No tienes suficientes puntos para canjear este cupón' });
     }
 
     // Descontar puntos del usuario
     await usersCollection.updateOne(
       { _id: new ObjectId(userId) },
-      { $inc: { puntos: -cupon.puntos_necesarios } }
+      { $inc: { points: -cupon.puntos_necesarios } }
     );
 
     // Reducir la cantidad del cupón
