@@ -3234,3 +3234,66 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
+//===========================================PUNTOS Y CAJEE DE CUPONES=======================================
+router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  try {
+    await client.connect();
+    const db = client.db('chefencasa');
+    const cuponModel = new Cupon(db);
+    const usersCollection = db.collection('usuarios');
+    const cuponesCanjeadosCollection = db.collection('cuponesCanjeadosVencidos');
+
+    // Buscar el cupón por ID
+    const cupon = await cuponModel.findById(id);
+    if (!cupon) {
+      return res.status(404).json({ message: 'Cupón no encontrado' });
+    }
+
+    // Verificar si hay suficiente cantidad
+    if (cupon.cantidad <= 0) {
+      return res.status(400).json({ message: 'No hay suficiente cantidad del cupón' });
+    }
+
+    // Verificar si el usuario tiene suficientes puntos
+    const usuario = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    if (usuario.puntos < cupon.puntos_necesarios) {
+      return res.status(400).json({ message: 'No tienes suficientes puntos para canjear este cupón' });
+    }
+
+    // Descontar puntos del usuario
+    await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $inc: { puntos: -cupon.puntos_necesarios } }
+    );
+
+    // Reducir la cantidad del cupón
+    await cuponModel.update(id, { cantidad: cupon.cantidad - 1 });
+
+    // Mover el cupón a la colección "cuponesCanjeadosVencidos"
+    const canjeado = {
+      cuponId: cupon._id,
+      nombre: cupon.nombre,
+      puntos_necesarios: cupon.puntos_necesarios,
+      cantidad: 1,
+      tienda: cupon.tienda,
+      fechaCanjeo: new Date(),
+      tipo: 'canjeado',
+      usuarioId: usuario._id,
+    };
+    await cuponesCanjeadosCollection.insertOne(canjeado);
+
+    res.status(200).json({ message: 'Cupón canjeado exitosamente' });
+  } catch (error) {
+    console.error('Error al canjear cupón:', error);
+    res.status(500).json({ message: 'Error al canjear cupón' });
+  } finally {
+    await client.close();
+  }
+});
