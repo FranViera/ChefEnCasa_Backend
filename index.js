@@ -22,6 +22,7 @@ const path = require('path');
 require('dotenv').config();
 const router = express.Router();
 const cron = require('node-cron');
+const Cupon = require('./models/Cupon');
 
 // Cargar las variables de entorno desde el archivo .env
 dotenv.config();
