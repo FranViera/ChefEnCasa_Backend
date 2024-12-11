@@ -296,42 +296,52 @@ app.post('/register', async (req, res) => {
 });
 
 
-
-  // Ruta de login de usuarios
+// Ruta de login de usuarios ========================================================================
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) { // Verificar si se envían todos los campos
+  if (!email || !password) {
     return res.status(400).json({ message: 'Todos los campos son obligatorios' });
   }
 
   try {
-    // Buscar el usuario en la base de datos
     const usuario = await usersCollection.findOne({ email });
     if (!usuario) {
       return res.status(400).json({ message: 'Email o contraseña incorrectos' });
     }
 
-    // Verificar si la contraseña es válida
     const passwordValido = await bcrypt.compare(password, usuario.password);
     if (!passwordValido) {
       return res.status(400).json({ message: 'Email o contraseña incorrectos' });
     }
 
-    // Generar el token JWT
-    const token = jwt.sign(
-      { id: usuario._id, email: usuario.email, role: usuario.role },
-      JWT_SECRET,
-      { expiresIn: '30d' } // Token válido por 30 días
-    );
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Asegurar comparación de días
 
-    // Actualizar la fecha de última sesión en la base de datos
+    if (!usuario.fechaUltimaActualizacionPuntos || usuario.fechaUltimaActualizacionPuntos < hoy) {
+      const nuevosPuntos = (usuario.points || 0) + 10;
+      await usersCollection.updateOne(
+        { _id: usuario._id },
+        {
+          $set: {
+            points: nuevosPuntos,
+            fechaUltimaActualizacionPuntos: new Date(),
+          },
+        }
+      );
+    }
+
     await usersCollection.updateOne(
       { email },
       { $set: { fechaUltimaSesion: new Date() } }
     );
 
-    // Enviar el token de respuesta
+    const token = jwt.sign(
+      { id: usuario._id, email: usuario.email, role: usuario.role },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
     res.status(200).json({ message: 'Login exitoso', token });
   } catch (error) {
     console.error('Error en login:', error.message);
@@ -3296,4 +3306,47 @@ router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
   } finally {
     await client.close();
   }
+});
+
+//FUNCION PARA GENERAR PUNTOS AUTOMATICAMENTE POR DIA ================================
+const addDailyPoints = async () => {
+  try {
+    const db = client.db('chefencasa'); // Conexión a la base de datos
+    const usersCollection = db.collection('users');
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Asegurar comparación de fechas solo en días
+
+    // Encuentra usuarios que no han recibido puntos hoy
+    const usuariosParaActualizar = await usersCollection.find({
+      $or: [
+        { fechaUltimaActualizacionPuntos: { $exists: false } },
+        { fechaUltimaActualizacionPuntos: { $lt: hoy } },
+      ],
+    }).toArray();
+
+    for (const usuario of usuariosParaActualizar) {
+      const nuevosPuntos = (usuario.points || 0) + 10;
+
+      // Actualizar puntos y fecha de última actualización
+      await usersCollection.updateOne(
+        { _id: usuario._id },
+        {
+          $set: {
+            points: nuevosPuntos,
+            fechaUltimaActualizacionPuntos: new Date(),
+          },
+        }
+      );
+    }
+    console.log(`Puntos diarios actualizados para ${usuariosParaActualizar.length} usuarios.`);
+  } catch (error) {
+    console.error('Error al actualizar puntos diarios:', error);
+  }
+};
+
+// Programar la tarea diaria para ejecutar a las 00:00
+cron.schedule('0 0 * * *', async () => {
+  console.log('Iniciando actualización diaria de puntos...');
+  await addDailyPoints(); // Ejecuta la lógica de puntos diarios
 });
