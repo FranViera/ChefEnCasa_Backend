@@ -3256,6 +3256,15 @@ router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
     const usersCollection = db.collection('usuarios');
     const cuponesCanjeadosCollection = db.collection('cuponesCanjeadosVencidos');
 
+    // Verificar si la colección "cuponesCanjeadosVencidos" existe, y si no, crearla
+    const collections = await db.listCollections().toArray();
+    const collectionExists = collections.some(col => col.name === 'cuponesCanjeadosVencidos');
+
+    if (!collectionExists) {
+      console.log('Creando colección "cuponesCanjeadosVencidos"...');
+      await db.createCollection('cuponesCanjeadosVencidos');
+    }
+
     // Buscar el cupón por ID
     const cupon = await cuponModel.findById(id);
     if (!cupon) {
@@ -3307,6 +3316,7 @@ router.post('/cupones/canjear/:id', authenticateToken, async (req, res) => {
     await client.close();
   }
 });
+
 
 //FUNCION PARA GENERAR PUNTOS AUTOMATICAMENTE POR DIA ================================
 const addDailyPoints = async () => {
